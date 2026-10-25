@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rocket Hub POS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style type="text/tailwindcss">
@@ -49,7 +50,8 @@ td{@apply py-2.5 px-3}
  <div class="card space-y-3">
   <div class="flex gap-2">
    <input id="q1" class="inp" placeholder="Title, catalog code or JAN barcode" autocomplete="off">
-   <button class="btn bg-violet-600 text-white" data-a="add" data-i="comp">New comp</button>
+   <button class="btn bg-cyan-400 text-black shrink-0" data-a="scan" data-i="q1" aria-label="Scan barcode">📷 Scan</button>
+   <button class="btn bg-violet-600 text-white shrink-0" data-a="add" data-i="comp">New comp</button>
   </div>
   <div id="pills" class="flex gap-2 overflow-x-auto pb-1"></div>
  </div>
@@ -60,7 +62,7 @@ td{@apply py-2.5 px-3}
 <section id="t2" class="space-y-4 hidden">
  <div class="card space-y-3 noprint">
   <div class="text-sm font-bold text-white">Customer buy offer <span id="offLbl" class="text-cyan-300"></span></div>
-  <input id="q2" class="inp" placeholder="Search what the customer wants to sell" autocomplete="off">
+  <div class="flex gap-2"><input id="q2" class="inp" placeholder="Search what the customer wants to sell" autocomplete="off"><button class="btn bg-cyan-400 text-black shrink-0" data-a="scan" data-i="q2" aria-label="Scan barcode">📷 Scan</button></div>
   <div id="res2" class="space-y-2"></div>
  </div>
  <div class="card space-y-3">
@@ -104,6 +106,15 @@ td{@apply py-2.5 px-3}
 </section>
 </main>
 
+<div id="scanM" class="fixed inset-0 z-50 hidden bg-black/90 p-4">
+ <div class="card max-w-md mx-auto mt-10 space-y-3">
+  <div class="font-bold text-white">Scan barcode</div>
+  <div id="scanBox" class="w-full overflow-hidden rounded-xl"></div>
+  <div class="text-xs text-gray-400">Hold the barcode inside the frame. If asked, allow camera access.</div>
+  <button class="btn bg-[#0b0c10] border border-white/10" data-a="closeScan">Cancel</button>
+ </div>
+</div>
+
 <div id="toast" class="fixed bottom-5 right-5 z-50 hidden px-4 py-3 rounded-xl bg-[#12131C] border border-violet-500 text-sm"></div>
 
 <!-- Item form (used for both comps and inventory) -->
@@ -112,7 +123,7 @@ td{@apply py-2.5 px-3}
   <div id="formTitle" class="font-bold text-white"></div>
   <div><label class="lbl">Title</label><input id="f_title" class="inp"></div>
   <div class="grid grid-cols-2 gap-3">
-   <div><label class="lbl">Catalog code / JAN</label><input id="f_code" class="inp"></div>
+   <div><label class="lbl">Catalog code / JAN</label><div class="flex gap-2"><input id="f_code" class="inp"><button class="btn bg-cyan-400 text-black" data-a="scan" data-i="f_code" aria-label="Scan barcode">📷</button></div></div>
    <div><label class="lbl">Console</label><select id="f_con" class="inp"></select></div>
   </div>
   <div class="grid grid-cols-4 gap-3">
@@ -198,8 +209,9 @@ function pills(){
 }
 function search1(){
  const q=$('q1').value.trim().toLowerCase();
- hits=S.comps.map((c,i)=>i).filter(i=>{const c=S.comps[i];return(con==='All'||c.console===con)&&(!q||(c.title+' '+c.code).toLowerCase().includes(q))});
- $('count').textContent=hits.length+' in comps database';
+ const all=S.comps.map((c,i)=>i).filter(i=>{const c=S.comps[i];return(con==='All'||c.console===con)&&(!q||(c.title+' '+c.code).toLowerCase().includes(q))});
+ hits=all.slice(0,60);
+ $('count').textContent=all.length+' in comps database'+(all.length>60?' (showing first 60, search or pick a console to narrow)':'');
  $('grid').innerHTML=hits.length?hits.map(i=>{
   const c=S.comps[i],p=net(c)-c.storePriceJPY;
   return `<div class="card space-y-3 flex flex-col justify-between">
@@ -308,7 +320,7 @@ function addCart(i){const c=S.comps[i];cart.push({...c,offer:defOffer(c)});rende
 const A={
  tab:showTab,
  con:c=>{con=c;pills();search1()},
- add:m=>openForm(m),
+ add:m=>{const q=$('q1').value.trim();openForm(m,/^\d{8,14}$/.test(q)?{code:q}:undefined)},
  toInv:i=>{const c=S.comps[i];openForm('inv',c)},
  toCart:i=>{addCart(+i)},
  rm:i=>{cart.splice(i,1);renderCart()},
@@ -336,6 +348,27 @@ const A={
  closeForm:()=>$('formM').classList.add('hidden'),
  saveForm
 };
+let scanner=null,scanCb=null;
+function openScan(cb){
+ if(typeof Html5Qrcode==='undefined')return toast('Scanner failed to load. Check your connection and reload.',false);
+ scanCb=cb;$('scanM').classList.remove('hidden');
+ const F=Html5QrcodeSupportedFormats;
+ scanner=new Html5Qrcode('scanBox',{formatsToSupport:[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128,F.CODE_39],useBarCodeDetectorIfSupported:true});
+ scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:140}},
+  txt=>{const f=scanCb;closeScan();if(f)f(txt)},()=>{})
+  .catch(()=>{toast('Camera unavailable. Allow camera access for this site in your browser settings.',false);closeScan()});
+}
+function closeScan(){
+ $('scanM').classList.add('hidden');
+ if(scanner){const s=scanner;scanner=null;s.stop().then(()=>s.clear()).catch(()=>{})}
+}
+A.scan=t=>openScan(v=>{
+ if(t==='q1'){$('q1').value=v;con='All';pills();search1()}
+ else if(t==='q2'){$('q2').value=v;search2()}
+ else $(t).value=v;
+ toast('Scanned '+v);
+});
+A.closeScan=closeScan;
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)A[b.dataset.a](b.dataset.i)});
 document.addEventListener('change',e=>{
  const o=e.target.dataset.offer;if(o!==undefined){cart[o].offer=Math.max(0,+e.target.value||0);renderCart()}
@@ -343,7 +376,7 @@ document.addEventListener('change',e=>{
 ['f_price','f_comp'].forEach(id=>$(id).addEventListener('input',margin));
 $('q1').addEventListener('input',search1);$('q2').addEventListener('input',search2);
 $('fCon').addEventListener('change',renderInv);$('fRank').addEventListener('change',renderInv);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
 
 function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1';$('offLbl').textContent='('+S.offer+'% of net after '+S.fee+'% fee)'}
 function renderAll(){pills();search1();search2();renderCart();renderInv()}
