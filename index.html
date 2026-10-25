@@ -115,6 +115,19 @@ td{@apply py-2.5 px-3}
  </div>
 </div>
 
+<div id="lowM" class="fixed inset-0 z-40 hidden bg-black/80 p-4">
+ <div class="card max-w-sm mx-auto space-y-3 mt-10">
+  <div class="font-bold text-white">Update lowest price</div>
+  <div id="lowItem" class="text-sm text-gray-400"></div>
+  <div><label class="lbl">New lowest price (JPY)</label><input id="low_price" type="number" min="0" class="inp"></div>
+  <div><label class="lbl">Seen at</label><div class="flex gap-2"><input id="low_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><button class="btn bg-cyan-400 text-black" data-a="gps" data-i="low_loc" aria-label="Find my location">📍</button></div></div>
+  <div class="flex justify-end gap-2">
+   <button class="btn bg-[#0b0c10]" data-a="closeLow">Cancel</button>
+   <button class="btn bg-yellow-300 text-black" data-a="saveLow">Save price</button>
+  </div>
+ </div>
+</div>
+
 <div id="toast" class="fixed bottom-5 right-5 z-50 hidden px-4 py-3 rounded-xl bg-[#12131C] border border-violet-500 text-sm"></div>
 
 <!-- Item form (used for both comps and inventory) -->
@@ -133,7 +146,7 @@ td{@apply py-2.5 px-3}
   </div>
   <div class="grid grid-cols-2 gap-3">
    <div><label class="lbl">Rank</label><select id="f_rank" class="inp"><option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option></select></div>
-   <div id="locBox"><label class="lbl">Bought at</label><input id="f_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata">
+   <div id="locBox"><label id="f_locLbl" class="lbl">Bought at</label><div class="flex gap-2"><input id="f_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><button class="btn bg-cyan-400 text-black" data-a="gps" data-i="f_loc" aria-label="Find my location">📍</button></div>
     <datalist id="stores"><option>Book Off Nogata</option><option>Manga Soukou</option><option>Surugaya</option><option>Hard Off</option><option>Mercari JP</option><option>Yahoo Auctions</option></datalist></div>
   </div>
   <div id="f_margin" class="text-sm text-gray-400"></div>
@@ -177,12 +190,14 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
 const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',13),offer:load('offer',70),
- url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc','')};
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[])};
 const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
 let cart=[],hits=[],con='All',formMode='comp';
 
 const net=i=>i.compUSD*S.rate*(1-S.fee/100);
 const defOffer=i=>Math.round(net(i)*S.offer/100);
+const byTitle=(a,b)=>S.comps[a].title.localeCompare(S.comps[b].title,undefined,{numeric:true,sensitivity:'base'});
+const lowP=c=>c.lowestJPY||c.storePriceJPY||0;
 
 function toast(m,ok=true){const t=$('toast');t.textContent=m;t.style.borderColor=ok?'#8b5cf6':'#ef4444';t.classList.remove('hidden');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.add('hidden'),2800)}
 function setSync(s){$('sync').textContent=s}
@@ -197,7 +212,7 @@ function sync(){
  if(!S.url)return setSync('Local only');
  setSync('Syncing...');
  fetch(S.url).then(r=>r.json()).then(d=>{
-  if(d.comps&&d.comps.length)S.comps=d.comps.map(c=>({...c,storePriceJPY:+c.storePriceJPY,compUSD:+c.compUSD}));
+  if(d.comps&&d.comps.length)S.comps=d.comps.map(c=>({...c,storePriceJPY:+c.storePriceJPY,lowestJPY:+c.lowestJPY,compUSD:+c.compUSD}));
   if(d.inv)S.inv=d.inv.map(c=>({...c,paidJPY:+c.paidJPY,compUSD:+c.compUSD}));
   save();renderAll();setSync('Synced');
  }).catch(()=>setSync('Offline - using saved data'));
@@ -209,22 +224,26 @@ function pills(){
 }
 function search1(){
  const q=$('q1').value.trim().toLowerCase();
+ if(!q){hits=[];$('count').textContent='';
+  $('grid').innerHTML='<div class="sm:col-span-2 lg:col-span-3 text-center text-sm text-gray-500 py-10">Scan a barcode or type a title or code to look up an item.</div>';return}
  const all=S.comps.map((c,i)=>i).filter(i=>{const c=S.comps[i];return(con==='All'||c.console===con)&&(!q||(c.title+' '+c.code).toLowerCase().includes(q))});
+ all.sort(byTitle);
  hits=all.slice(0,60);
  $('count').textContent=all.length+' in comps database'+(all.length>60?' (showing first 60, search or pick a console to narrow)':'');
  $('grid').innerHTML=hits.length?hits.map(i=>{
-  const c=S.comps[i],p=net(c)-c.storePriceJPY;
+  const c=S.comps[i],p=net(c)-lowP(c);
   return `<div class="card space-y-3 flex flex-col justify-between">
    <div><div class="flex justify-between gap-2 text-xs"><span class="font-mono text-cyan-300">${esc(c.code)}</span>
     <span><span class="text-gray-400 mr-1">${esc(c.format)}</span><span class="rk rk-${esc(c.rank)}">${esc(c.rank)}</span></span></div>
     <div class="font-bold text-white mt-2">${esc(c.title)}</div><div class="text-xs text-gray-400">${esc(c.console)}</div></div>
    <div class="grid grid-cols-2 gap-2 text-xs">
-    <div><div class="text-gray-400">Shop price</div><b class="text-white">${yen(c.storePriceJPY)}</b></div>
+    <div><div class="text-gray-400">Lowest price seen</div><b class="text-white">${yen(lowP(c))}</b>${c.location?`<div class="text-gray-500">${esc(c.location)}</div>`:''}</div>
     <div><div class="text-gray-400">eBay comp $${c.compUSD}</div><b class="${p>0?'text-emerald-300':'text-red-400'}">${p>0?'+':''}${yen(p)} profit</b></div>
    </div>
    <div class="grid grid-cols-2 gap-2">
     <button class="btn bg-emerald-400 text-black" data-a="toInv" data-i="${i}">Add to inventory</button>
     <button class="btn bg-[#0b0c10] border border-white/10 text-cyan-300" data-a="toCart" data-i="${i}">Buy offer</button>
+    <button class="btn bg-[#0b0c10] border border-white/10 text-yellow-300 col-span-2" data-a="low" data-i="${i}">Update lowest price</button>
    </div></div>`}).join('')
  :`<div class="card sm:col-span-2 lg:col-span-3 text-center space-y-3"><div class="text-white font-bold">Nothing matches</div>
    <div class="text-xs text-gray-400">Add it to the comps database or straight into your inventory.</div>
@@ -236,7 +255,7 @@ function search1(){
 function search2(){
  const q=$('q2').value.trim().toLowerCase();
  if(!q){$('res2').innerHTML='<div class="text-xs text-gray-500">Type a title or code to see the offer.</div>';return}
- const m=S.comps.map((c,i)=>i).filter(i=>(S.comps[i].title+' '+S.comps[i].code).toLowerCase().includes(q)).slice(0,20);
+ const m=S.comps.map((c,i)=>i).filter(i=>(S.comps[i].title+' '+S.comps[i].code).toLowerCase().includes(q)).sort(byTitle).slice(0,20);
  $('res2').innerHTML=m.length?m.map(i=>{const c=S.comps[i];return `<div class="flex items-center justify-between gap-3 bg-[#0b0c10] rounded-xl p-3">
   <div><div class="text-white text-sm font-semibold">${esc(c.title)} <span class="text-gray-400 font-normal">(${esc(c.console)}, ${esc(c.format)})</span></div>
   <div class="text-xs text-gray-400">${esc(c.code)} | comp $${c.compUSD} | offer <b class="text-cyan-300">${yen(defOffer(c))}</b></div></div>
@@ -281,12 +300,12 @@ function openForm(mode,item){
  formMode=mode;
  $('formTitle').textContent=mode==='comp'?'Add to comps database':'Add to my inventory';
  $('f_priceLbl').textContent=mode==='comp'?'Shop price (JPY)':'Price paid (JPY)';
- $('locBox').classList.toggle('hidden',mode==='comp');
+ $('f_locLbl').textContent=mode==='comp'?'Seen at':'Bought at';
  $('f_title').value=item?.title||'';$('f_code').value=item?.code||'';
  $('f_con').value=item?.console||CON[0];
- $('f_price').value=item?.storePriceJPY??1000;$('f_comp').value=item?.compUSD??30;
+ $('f_price').value=(item&&lowP(item))||1000;$('f_comp').value=item?.compUSD??30;
  $('f_fmt').value=item?.format||'CIB';$('f_rank').value=item?.rank||'B';$('f_loc').value=S.loc||'';
- margin();$('formM').classList.remove('hidden');$('f_title').focus();
+ margin();$('formM').classList.remove('hidden');$('f_title').focus();autoLoc('f_loc');
 }
 function margin(){
  const p=net({compUSD:+$('f_comp').value||0})-(+$('f_price').value||0);
@@ -296,10 +315,10 @@ function saveForm(){
  const o={title:$('f_title').value.trim(),code:$('f_code').value.trim().toUpperCase(),console:$('f_con').value,
   format:$('f_fmt').value,rank:$('f_rank').value,compUSD:+$('f_comp').value||0};
  if(!o.title)return toast('Enter a title',false);
- const price=+$('f_price').value||0;
+ const price=+$('f_price').value||0,loc=$('f_loc').value.trim();
  if(formMode==='comp'){
   if(!o.code)return toast('Enter a catalog code',false);
-  o.storePriceJPY=price;
+  o.storePriceJPY=price;o.lowestJPY=price;o.location=loc;
   const k=S.comps.findIndex(c=>c.code===o.code&&c.console===o.console);
   k>-1?S.comps[k]=o:S.comps.unshift(o);
   post('addComp',o);search1();
@@ -307,7 +326,7 @@ function saveForm(){
   o.id='INV-'+Date.now();o.paidJPY=price;o.location=$('f_loc').value.trim()||'Unknown';o.date=new Date().toISOString().slice(0,10);
   S.loc=$('f_loc').value.trim();S.inv.unshift(o);post('addInv',{items:[o]});renderInv();
  }
- save();$('formM').classList.add('hidden');toast('Saved '+o.title);
+ rememberStore(loc);save();$('formM').classList.add('hidden');toast('Saved '+o.title);
 }
 
 // ---- Actions ----
@@ -369,6 +388,53 @@ A.scan=t=>openScan(v=>{
  toast('Scanned '+v);
 });
 A.closeScan=closeScan;
+let geo=null;
+const dist=(a,b)=>{const R=6371000,r=x=>x*Math.PI/180,dl=r(b.lat-a.lat),dn=r(b.lng-a.lng),h=Math.sin(dl/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+function locate(){return new Promise((ok,no)=>{
+ if(!navigator.geolocation)return no('This browser has no GPS support');
+ navigator.geolocation.getCurrentPosition(async p=>{
+  const g={lat:p.coords.latitude,lng:p.coords.longitude};geo=g;
+  const near=S.stores.map(s=>({s,d:dist(g,s)})).filter(x=>x.d<150).sort((a,b)=>a.d-b.d)[0];
+  if(near)return ok(near.s.name);
+  try{
+   const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat='+g.lat+'&lon='+g.lng);
+   const d=await r.json(),a=d.address||{};
+   ok(d.name||a.shop||[a.road,a.suburb||a.city_district||a.city].filter(Boolean).join(', ')||'');
+  }catch{ok('')}
+ },e=>no(e.code===1?'Location blocked. Allow location for this site in your browser settings.':'Could not get your location'),
+ {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+})}
+function autoLoc(id,manual){
+ const el=$(id),ph=el.placeholder;geo=null;
+ if(!manual)el.dataset.touched='';
+ el.placeholder='Finding your location...';
+ locate().then(n=>{
+  el.placeholder=ph;
+  if(n&&(manual||!el.dataset.touched)){el.value=n;if(manual)toast('Location: '+n)}
+  else if(!n&&manual)toast('Got GPS but no store name. Type the name once and the app will remember this spot.',false);
+ }).catch(m=>{el.placeholder=ph;if(manual)toast(m,false)});
+}
+function rememberStore(name){
+ if(!name||!geo)return;
+ S.stores=S.stores.filter(s=>s.name!==name&&dist(s,geo)>=150);
+ S.stores.push({name,lat:geo.lat,lng:geo.lng});
+}
+['f_loc','low_loc'].forEach(id=>$(id).addEventListener('input',e=>e.target.dataset.touched='1'));
+A.gps=id=>autoLoc(id,true);
+let lowIdx=-1;
+A.low=i=>{lowIdx=+i;const c=S.comps[lowIdx];
+ $('lowItem').textContent=c.title+' ('+c.console+') - now '+yen(lowP(c));
+ $('low_price').value=lowP(c)||'';$('low_loc').value=S.loc||'';
+ $('lowM').classList.remove('hidden');$('low_price').select();autoLoc('low_loc')};
+A.closeLow=()=>$('lowM').classList.add('hidden');
+A.saveLow=()=>{
+ const c=S.comps[lowIdx],v=+$('low_price').value;
+ if(!(v>0))return toast('Enter the new price',false);
+ const loc=$('low_loc').value.trim();
+ c.lowestJPY=v;if(loc){c.location=loc;S.loc=loc;rememberStore(loc)}
+ post('updateLow',{code:c.code,title:c.title,console:c.console,lowestJPY:v,location:loc});
+ save();A.closeLow();search1();toast('Lowest price updated to '+yen(v));
+};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)A[b.dataset.a](b.dataset.i)});
 document.addEventListener('change',e=>{
  const o=e.target.dataset.offer;if(o!==undefined){cart[o].offer=Math.max(0,+e.target.value||0);renderCart()}
@@ -376,7 +442,7 @@ document.addEventListener('change',e=>{
 ['f_price','f_comp'].forEach(id=>$(id).addEventListener('input',margin));
 $('q1').addEventListener('input',search1);$('q2').addEventListener('input',search2);
 $('fCon').addEventListener('change',renderInv);$('fRank').addEventListener('change',renderInv);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('lowM').classList.add('hidden');$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
 
 function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1';$('offLbl').textContent='('+S.offer+'% of net after '+S.fee+'% fee)'}
 function renderAll(){pills();search1();search2();renderCart();renderInv()}
