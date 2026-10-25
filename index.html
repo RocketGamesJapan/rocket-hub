@@ -10,10 +10,10 @@
 <style type="text/tailwindcss">
 body{font-family:Inter,sans-serif;background:#0b0c10;color:#e5e7eb}
 .card{@apply bg-[#12131C] border border-white/10 rounded-2xl p-4}
-.inp{@apply w-full px-3 py-2 bg-[#0b0c10] border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-violet-500}
-.btn{@apply px-3 py-2 rounded-xl text-xs font-bold transition}
+.inp{@apply w-full px-3 py-2 bg-[#0b0c10] border border-white/10 rounded-xl text-base text-white focus:outline-none focus:border-violet-500}
+.btn{@apply px-4 py-2.5 rounded-xl text-sm font-bold transition}
 .lbl{@apply block text-xs text-gray-400 mb-1}
-.tab{@apply px-3 py-2 rounded-lg text-xs font-bold text-gray-400}
+.tab{@apply flex-1 py-3.5 text-sm text-center font-bold text-gray-400 sm:flex-none sm:px-3 sm:py-2 sm:text-xs sm:rounded-lg}
 .tab.on{@apply bg-violet-600 text-white}
 .pill{@apply px-3 py-1 rounded-xl text-xs border border-white/10 text-gray-400 whitespace-nowrap}
 .pill.on{@apply bg-violet-600 text-white border-violet-600}
@@ -25,14 +25,14 @@ body{font-family:Inter,sans-serif;background:#0b0c10;color:#e5e7eb}
 .rk-D{@apply text-red-400 border-red-400/40 bg-red-400/10}
 th{@apply py-2 px-3 text-xs font-semibold text-gray-400 text-left}
 td{@apply py-2.5 px-3}
-@media print{header,.noprint,.np{display:none!important}body{background:#fff;color:#000}.card{border:0;background:#fff}}
+@media print{header,.noprint,.np{display:none!important}body{background:#fff}*{color:#000!important}.card{border:0;background:#fff}.inp{background:#fff!important;border:0!important}}
 </style>
 </head>
-<body class="min-h-screen pb-16">
+<body class="min-h-screen pb-28 sm:pb-16">
 <header class="sticky top-0 z-30 bg-[#0b0c10]/95 border-b border-white/10 px-4 py-3">
  <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
   <div class="font-extrabold text-white">🚀 Rocket Hub <span class="text-gray-500 font-normal text-sm">Scout & Inventory</span></div>
-  <nav class="flex gap-1 bg-[#12131C] p-1 rounded-xl">
+  <nav class="fixed bottom-0 inset-x-0 z-30 flex bg-[#12131C] border-t border-white/10 pb-[env(safe-area-inset-bottom)] sm:static sm:border-0 sm:p-1 sm:rounded-xl sm:gap-1 sm:pb-1">
    <button class="tab on" data-a="tab" data-i="t1">Stock lookup</button>
    <button class="tab" data-a="tab" data-i="t2">Buy offers <span id="badge" class="hidden ml-1 bg-pink-600 text-white rounded-full px-1.5">0</span></button>
    <button class="tab" data-a="tab" data-i="t3">Inventory</button>
@@ -47,14 +47,17 @@ td{@apply py-2.5 px-3}
 <main class="max-w-6xl mx-auto px-4 pt-5 space-y-5">
 
 <section id="t1" class="space-y-4">
+ <button class="w-full py-6 rounded-2xl bg-cyan-400 text-black text-xl font-extrabold" data-a="scan" data-i="q1">📷 Scan barcode</button>
  <div class="card space-y-3">
   <div class="flex gap-2">
    <input id="q1" class="inp" placeholder="Title, catalog code or JAN barcode" autocomplete="off">
-   <button class="btn bg-cyan-400 text-black shrink-0" data-a="scan" data-i="q1" aria-label="Scan barcode">📷 Scan</button>
    <button class="btn bg-violet-600 text-white shrink-0" data-a="add" data-i="comp">New comp</button>
   </div>
   <div id="pills" class="flex gap-2 overflow-x-auto pb-1"></div>
+  <details><summary class="text-sm text-yellow-300 cursor-pointer">★ Watchlist <span id="wCount"></span></summary><div id="wList" class="mt-2 space-y-2"></div></details>
  </div>
+ <div id="ownBanner" class="hidden rounded-2xl bg-sky-400 text-black font-extrabold text-center py-3 px-3"></div>
+ <div id="watchBanner" class="hidden rounded-2xl bg-yellow-300 text-black font-extrabold text-center py-4 px-3 text-lg animate-pulse"></div>
  <div id="count" class="text-sm text-gray-400"></div>
  <div id="grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 </section>
@@ -62,34 +65,40 @@ td{@apply py-2.5 px-3}
 <section id="t2" class="space-y-4 hidden">
  <div class="card space-y-3 noprint">
   <div class="text-sm font-bold text-white">Customer buy offer <span id="offLbl" class="text-cyan-300"></span></div>
-  <div class="flex gap-2"><input id="q2" class="inp" placeholder="Search what the customer wants to sell" autocomplete="off"><button class="btn bg-cyan-400 text-black shrink-0" data-a="scan" data-i="q2" aria-label="Scan barcode">📷 Scan</button></div>
+  <div class="flex gap-2"><input id="q2" class="inp" placeholder="Search what the customer wants to sell" autocomplete="off"><button class="btn bg-cyan-400 text-black shrink-0" data-a="scan" data-i="q2" aria-label="Scan barcode">📷 Scan</button><button class="btn bg-cyan-400 text-black shrink-0" data-a="multi">📷 Pile</button></div>
   <div id="res2" class="space-y-2"></div>
+  <button class="btn w-full bg-[#0b0c10] border border-cyan-400/40 text-cyan-300" data-a="addManual">＋ Item not in database</button>
  </div>
  <div class="card space-y-3">
+  <div class="hidden print:block mb-2"><div class="text-xl font-bold">お買取査定書 / Purchase Offer</div><div class="text-sm">Rocket Hub　<span id="pDate"></span></div></div>
   <div class="flex justify-between items-center">
    <div class="font-bold text-white">Offer list</div>
    <button class="btn text-red-400 noprint" data-a="clear">Clear</button>
   </div>
   <div class="overflow-x-auto"><table class="w-full text-sm">
-   <thead><tr><th>Item</th><th class="np">eBay comp</th><th class="np">Net after fee</th><th>Offer (¥)</th><th class="np">Profit</th><th class="noprint"></th></tr></thead>
+   <thead><tr><th>Item<span class="hidden print:inline"> 商品名</span></th><th class="np">eBay comp</th><th class="np">Net after fee</th><th>Offer (¥)<span class="hidden print:inline"> 買取額</span></th><th class="np">Profit</th><th class="noprint"></th></tr></thead>
    <tbody id="cart" class="divide-y divide-white/10"></tbody>
   </table></div>
   <div class="flex flex-wrap justify-between items-center gap-3 border-t border-white/10 pt-3">
-   <div class="text-sm"><span class="text-gray-400">Total offer</span> <b id="tPay" class="text-cyan-300 text-xl ml-1">¥0</b>
+   <div class="text-sm"><span class="text-gray-400">Total offer<span class="hidden print:inline"> 合計買取額</span></span> <b id="tPay" class="text-cyan-300 text-xl ml-1">¥0</b>
     <span class="np ml-4 text-gray-400">Est. profit <b id="tProfit" class="text-emerald-300">¥0</b></span></div>
    <div class="flex gap-2 noprint">
     <button class="btn bg-[#0b0c10] border border-white/10" data-a="print">Print offer</button>
     <button class="btn bg-emerald-400 text-black" data-a="accept">Accept and add to inventory</button>
    </div>
   </div>
+  <div class="hidden print:block text-sm mt-8">上記の金額でお買い取りいたします。<br>We offer the amounts above for these items.<br><br>お客様署名 / Customer signature: ______________________</div>
  </div>
 </section>
 
 <section id="t3" class="space-y-4 hidden">
  <div id="stats" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+ <div class="card"><div class="font-bold text-white">Profit by store</div><div class="text-xs text-gray-500 mb-2">Sold items use the real sale price; unsold items use the projected comp.</div><div id="storeSum" class="space-y-1 text-sm"></div></div>
+ <div class="card"><div class="flex justify-between items-center mb-3"><div class="font-bold text-white">Monthly summary</div><input id="mSel" type="month" class="inp !w-auto"></div><div id="monthSum" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div></div>
  <div class="card space-y-3">
   <div class="flex flex-wrap gap-2 justify-between">
    <div class="flex gap-2">
+    <select id="fSt" class="inp !w-auto"><option value="stock">In stock</option><option value="old">In stock, oldest first</option><option value="sold">Sold</option><option value="">All</option></select>
     <select id="fCon" class="inp !w-auto"><option value="">All consoles</option></select>
     <select id="fRank" class="inp !w-auto"><option value="">All ranks</option><option>S</option><option>A</option><option>B</option><option>C</option><option>D</option></select>
    </div>
@@ -98,8 +107,9 @@ td{@apply py-2.5 px-3}
     <button class="btn bg-[#0b0c10] border border-white/10" data-a="csv">Export CSV</button>
    </div>
   </div>
-  <div class="overflow-x-auto"><table class="w-full text-sm">
-   <thead><tr><th>Title</th><th>Console</th><th>Bought at</th><th>Grade</th><th>Paid</th><th>Comp</th><th>Net profit</th><th></th></tr></thead>
+  <div id="invCards" class="sm:hidden space-y-2"></div>
+  <div class="overflow-x-auto hidden sm:block"><table class="w-full text-sm">
+   <thead><tr><th>Title</th><th>Console</th><th>Bought at</th><th>Grade</th><th>Paid</th><th>Comp</th><th>Net profit</th><th>Days</th><th></th></tr></thead>
    <tbody id="invBody" class="divide-y divide-white/10"></tbody>
   </table></div>
  </div>
@@ -110,16 +120,18 @@ td{@apply py-2.5 px-3}
  <div class="card max-w-md mx-auto mt-10 space-y-3">
   <div class="font-bold text-white">Scan barcode</div>
   <div id="scanBox" class="w-full overflow-hidden rounded-xl"></div>
+  <div id="scanInfo" class="text-sm text-cyan-300 min-h-[1.5rem]"></div>
   <div class="text-xs text-gray-400">Hold the barcode inside the frame. If asked, allow camera access.</div>
-  <button class="btn bg-[#0b0c10] border border-white/10" data-a="closeScan">Cancel</button>
+  <button class="btn bg-[#0b0c10] border border-white/10" data-a="closeScan">Done</button>
  </div>
 </div>
 
 <div id="lowM" class="fixed inset-0 z-40 hidden bg-black/80 p-4">
  <div class="card max-w-sm mx-auto space-y-3 mt-10">
-  <div class="font-bold text-white">Update lowest price</div>
+  <div class="font-bold text-white">Update prices</div>
   <div id="lowItem" class="text-sm text-gray-400"></div>
   <div><label class="lbl">New lowest price (JPY)</label><input id="low_price" type="number" min="0" class="inp"></div>
+  <div><label class="lbl">eBay comp (USD) - change only if you rechecked it</label><input id="low_comp" type="number" min="0" step="0.01" class="inp"><button class="text-sm text-sky-300 mt-1" data-a="fe2">Check eBay sold listings ↗</button></div>
   <div><label class="lbl">Seen at</label><div class="flex gap-2"><input id="low_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><button class="btn bg-cyan-400 text-black" data-a="gps" data-i="low_loc" aria-label="Find my location">📍</button></div></div>
   <div class="flex justify-end gap-2">
    <button class="btn bg-[#0b0c10]" data-a="closeLow">Cancel</button>
@@ -128,7 +140,7 @@ td{@apply py-2.5 px-3}
  </div>
 </div>
 
-<div id="toast" class="fixed bottom-5 right-5 z-50 hidden px-4 py-3 rounded-xl bg-[#12131C] border border-violet-500 text-sm"></div>
+<div id="toast" class="fixed bottom-24 sm:bottom-5 right-4 z-50 hidden px-4 py-3 rounded-xl bg-[#12131C] border border-violet-500 text-sm"></div>
 
 <!-- Item form (used for both comps and inventory) -->
 <div id="formM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto">
@@ -136,19 +148,21 @@ td{@apply py-2.5 px-3}
   <div id="formTitle" class="font-bold text-white"></div>
   <div><label class="lbl">Title</label><input id="f_title" class="inp"></div>
   <div class="grid grid-cols-2 gap-3">
-   <div><label class="lbl">Catalog code / JAN</label><div class="flex gap-2"><input id="f_code" class="inp"><button class="btn bg-cyan-400 text-black" data-a="scan" data-i="f_code" aria-label="Scan barcode">📷</button></div></div>
+   <div><label class="lbl">Catalog code / JAN (optional)</label><div class="flex gap-2"><input id="f_code" class="inp"><button class="btn bg-cyan-400 text-black" data-a="scan" data-i="f_code" aria-label="Scan barcode">📷</button></div></div>
    <div><label class="lbl">Console</label><select id="f_con" class="inp"></select></div>
   </div>
   <div class="grid grid-cols-4 gap-3">
-   <div class="col-span-2"><label id="f_priceLbl" class="lbl"></label><input id="f_price" type="number" min="0" class="inp"></div>
+   <div id="priceBox" class="col-span-2"><label id="f_priceLbl" class="lbl"></label><input id="f_price" type="number" min="0" class="inp"></div>
    <div><label class="lbl">Comp (USD)</label><input id="f_comp" type="number" min="0" step="0.01" class="inp"></div>
    <div><label class="lbl">Format</label><select id="f_fmt" class="inp"><option>CIB</option><option>Loose</option></select></div>
   </div>
   <div class="grid grid-cols-2 gap-3">
    <div><label class="lbl">Rank</label><select id="f_rank" class="inp"><option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option></select></div>
    <div id="locBox"><label id="f_locLbl" class="lbl">Bought at</label><div class="flex gap-2"><input id="f_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><button class="btn bg-cyan-400 text-black" data-a="gps" data-i="f_loc" aria-label="Find my location">📍</button></div>
-    <datalist id="stores"><option>Book Off Nogata</option><option>Manga Soukou</option><option>Surugaya</option><option>Hard Off</option><option>Mercari JP</option><option>Yahoo Auctions</option></datalist></div>
+    <datalist id="stores"><option>Book Off Iikura</option><option>Book Off Notame</option><option>Hard Off Kasuga Shirouzu</option><option>Hard Off Nakama</option><option>Hard Off Outlets</option><option>Hard Off Yahatanishi</option><option>Manga Soukou Airport</option><option>Manga Soukou Costco</option><option>Manga Soukou Iizuka</option><option>Manga Soukou Kaizuka</option><option>Manga Soukou Tsukiguma</option><option>Mercari</option><option>Willy</option><option>Yahoo Auction</option><option>Yahoo Flea Market</option></datalist></div>
   </div>
+  <button class="text-sm text-sky-300 text-left" data-a="fe">Check eBay sold listings for this title ↗</button>
+  <div id="saveCompBox" class="hidden"><label class="flex items-center gap-2 text-sm text-gray-300"><input id="f_saveComp" type="checkbox" checked> Also save to comps database for next time</label></div>
   <div id="f_margin" class="text-sm text-gray-400"></div>
   <div class="flex justify-end gap-2">
    <button class="btn bg-[#0b0c10]" data-a="closeForm">Cancel</button>
@@ -161,11 +175,18 @@ td{@apply py-2.5 px-3}
  <div class="card max-w-md mx-auto space-y-3 mt-10">
   <div class="font-bold text-white">Settings</div>
   <div><label class="lbl">Google Apps Script web app URL (leave empty to work offline)</label><input id="s_url" class="inp font-mono text-xs"></div>
+  <div><label class="lbl">Passcode (same as in Code.gs, if you set one)</label><input id="s_pw" type="password" class="inp"></div>
+  <label class="flex items-center gap-2 text-sm text-gray-300"><input id="s_auto" type="checkbox"> Update the ¥ per $1 rate automatically once a day</label>
   <div class="grid grid-cols-3 gap-3">
    <div><label class="lbl">¥ per $1</label><input id="s_rate" type="number" class="inp"></div>
    <div><label class="lbl">eBay fee %</label><input id="s_fee" type="number" class="inp"></div>
    <div><label class="lbl">Offer % of net</label><input id="s_off" type="number" class="inp"></div>
   </div>
+  <div class="grid grid-cols-2 gap-3">
+   <div><label class="lbl">BUY only if profit is at least ¥</label><input id="s_minp" type="number" class="inp"></div>
+   <div><label class="lbl">and at least this % of price</label><input id="s_minpct" type="number" class="inp"></div>
+  </div>
+  <div><label class="lbl">or BUY anyway if profit is at least ¥ (0 = off)</label><input id="s_bigp" type="number" class="inp"></div>
   <div class="flex justify-end gap-2">
    <button class="btn bg-[#0b0c10]" data-a="settings">Cancel</button>
    <button class="btn bg-violet-600 text-white" data-a="saveSet">Save settings</button>
@@ -189,8 +210,8 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
-const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',13),offer:load('offer',70),
- url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[])};
+const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',15),offer:load('offer',70),
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[])};
 const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
 let cart=[],hits=[],con='All',formMode='comp';
 
@@ -198,20 +219,57 @@ const net=i=>i.compUSD*S.rate*(1-S.fee/100);
 const defOffer=i=>Math.round(net(i)*S.offer/100);
 const byTitle=(a,b)=>S.comps[a].title.localeCompare(S.comps[b].title,undefined,{numeric:true,sensitivity:'base'});
 const lowP=c=>c.lowestJPY||c.storePriceJPY||0;
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const ebay=c=>'https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent([c.title,c.format,'Japan'].filter(Boolean).join(' '))+'&LH_Sold=1&LH_Complete=1';
+const ageTxt=c=>{if(!c.compUSD)return '';if(!c.compDate)return ' | <span class="text-amber-300">comp date unknown</span>';
+ const d=Math.floor((Date.now()-new Date(c.compDate))/864e5);if(isNaN(d))return '';
+ return d>90?' | <span class="text-amber-300">comp '+d+' days old</span>':' | comp '+d+'d old'};
+const wk=c=>c.console+'|'+c.format+'|'+(c.code||c.title);
+const isW=c=>S.watch.some(w=>w.k===wk(c));
+const ownN=c=>S.inv.filter(i=>i.status!=='sold'&&i.console===c.console&&i.format===c.format&&(c.code?i.code===c.code:i.title===c.title));
+const maxPay=c=>{const a=net(c)/(1+S.minPct/100),b=S.bigP>0?net(c)-S.bigP:-Infinity;return Math.max(0,Math.floor(Math.min(net(c)-S.minP,Math.max(a,b))))};
+const bandBox=(c,price,i,typed)=>{
+ if(!c.compUSD)return `<div id="band${i}" class="rounded-xl p-3 bg-white/5"><div class="text-2xl font-extrabold text-gray-300">NO COMP</div><div class="text-xs text-gray-400">Check eBay sold listings and add a comp</div></div>`;
+ if(!(price>0))return `<div id="band${i}" class="rounded-xl p-3 bg-white/5"><div class="text-2xl font-extrabold text-gray-300">ENTER PRICE</div><div class="text-sm text-white">Pay up to ${yen(maxPay(c))} for your target profit</div></div>`;
+ const p=net(c)-price,roi=p/price*100,buy=p>=S.minP&&(roi>=S.minPct||(S.bigP>0&&p>=S.bigP));
+ return `<div id="band${i}" class="rounded-xl p-3 border ${buy?'bg-emerald-500/25 border-emerald-400':'bg-red-500/25 border-red-400'}"><div class="text-4xl font-extrabold ${buy?'text-emerald-300':'text-red-300'}">${buy?'BUY':'SKIP'}</div><div class="text-sm text-white">${p>0?'+':''}${yen(p)} profit (${Math.round(roi)}%) at ${yen(price)}${typed?'':' (lowest seen)'}${buy&&roi<S.minPct?' | big-profit rule':''}</div><div class="text-xs text-gray-300">Pay up to ${yen(maxPay(c))} for your target</div></div>`};
+let here={name:'',t:0};
+function warmLoc(){locate().then(n=>{if(n)here={name:n,t:Date.now()}}).catch(()=>{})}
 
 function toast(m,ok=true){const t=$('toast');t.textContent=m;t.style.borderColor=ok?'#8b5cf6':'#ef4444';t.classList.remove('hidden');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.add('hidden'),2800)}
 function setSync(s){$('sync').textContent=s}
 
 // ---- Google Sheet sync (reads with GET, writes with POST) ----
-function post(action,data){
- if(!S.url)return;
- fetch(S.url,{method:'POST',mode:'no-cors',body:JSON.stringify({action,...data})})
-  .then(()=>setSync('Synced')).catch(()=>setSync('Sync failed - saved locally'));
+function post(action,data){S.queue.push({action,...data,pw:S.pw,qid:Date.now()+'-'+Math.random().toString(36).slice(2)});save();flush()}
+function updateRate(){
+ if(!S.autoRate||!navigator.onLine||S.rateDate===today())return;
+ fetch('https://open.er-api.com/v6/latest/USD').then(r=>r.json()).then(d=>{
+  const j=d&&d.rates&&d.rates.JPY;if(!(j>50))return;
+  S.rate=Math.round(j*100)/100;S.rateDate=today();save();labels();renderAll();toast('Exchange rate updated: ¥'+S.rate+' / $1');
+ }).catch(()=>{});
+}
+let flushing=false;
+async function flush(){
+ if(!S.url||flushing||!S.queue.length||!navigator.onLine)return;
+ flushing=true;
+ try{
+  while(S.queue.length){
+   const body=JSON.stringify(S.queue[0]);let r;
+   try{r=await(await fetch(S.url,{method:'POST',body})).json()}
+   catch{await fetch(S.url,{method:'POST',mode:'no-cors',body});r={ok:true}}
+   if(!r.ok){setSync(r.error==='auth'?'Wrong passcode':'Server error');flushing=false;return}
+   S.queue.shift();save();
+  }
+ }catch{}
+ flushing=false;
+ setSync(S.queue.length?S.queue.length+' waiting to sync':'Synced');
 }
 function sync(){
  if(!S.url)return setSync('Local only');
+ if(S.queue.length){flush().then(()=>{if(!S.queue.length)sync()});return}
  setSync('Syncing...');
- fetch(S.url).then(r=>r.json()).then(d=>{
+ fetch(S.url+'?pw='+encodeURIComponent(S.pw)).then(r=>r.json()).then(d=>{
+  if(d.error){setSync(d.error==='auth'?'Wrong passcode':'Server error');return}
   if(d.comps&&d.comps.length)S.comps=d.comps.map(c=>({...c,storePriceJPY:+c.storePriceJPY,lowestJPY:+c.lowestJPY,compUSD:+c.compUSD}));
   if(d.inv)S.inv=d.inv.map(c=>({...c,paidJPY:+c.paidJPY,compUSD:+c.compUSD}));
   save();renderAll();setSync('Synced');
@@ -224,26 +282,35 @@ function pills(){
 }
 function search1(){
  const q=$('q1').value.trim().toLowerCase();
- if(!q){hits=[];$('count').textContent='';
+ if(!q){hits=[];$('count').textContent='';$('watchBanner').classList.add('hidden');$('ownBanner').classList.add('hidden');
   $('grid').innerHTML='<div class="sm:col-span-2 lg:col-span-3 text-center text-sm text-gray-500 py-10">Scan a barcode or type a title or code to look up an item.</div>';return}
  const all=S.comps.map((c,i)=>i).filter(i=>{const c=S.comps[i];return(con==='All'||c.console===con)&&(!q||(c.title+' '+c.code).toLowerCase().includes(q))});
  all.sort(byTitle);
  hits=all.slice(0,60);
+ const w=hits.filter(i=>isW(S.comps[i]));
+ $('watchBanner').classList.toggle('hidden',!w.length);
+ $('watchBanner').textContent='★ ON YOUR WATCHLIST: '+w.map(i=>S.comps[i].title).join(', ');
+ if(w.length&&window._sc&&navigator.vibrate)navigator.vibrate([200,100,200]);
+ window._sc=0;
+ const ow=hits.filter(i=>ownN(S.comps[i]).length);
+ $('ownBanner').classList.toggle('hidden',!ow.length||hits.length>3);
+ $('ownBanner').textContent='📦 YOU ALREADY HAVE: '+ow.map(i=>{const c=S.comps[i];return c.title+' ('+c.format+') x'+ownN(c).length}).join(', ');
  $('count').textContent=all.length+' in comps database'+(all.length>60?' (showing first 60, search or pick a console to narrow)':'');
  $('grid').innerHTML=hits.length?hits.map(i=>{
   const c=S.comps[i],p=net(c)-lowP(c);
-  return `<div class="card space-y-3 flex flex-col justify-between">
+  return `<div class="card space-y-3 flex flex-col justify-between ${isW(c)?'ring-2 ring-yellow-300':''}">
    <div><div class="flex justify-between gap-2 text-xs"><span class="font-mono text-cyan-300">${esc(c.code)}</span>
     <span><span class="text-gray-400 mr-1">${esc(c.format)}</span><span class="rk rk-${esc(c.rank)}">${esc(c.rank)}</span></span></div>
-    <div class="font-bold text-white mt-2">${esc(c.title)}</div><div class="text-xs text-gray-400">${esc(c.console)}</div></div>
-   <div class="grid grid-cols-2 gap-2 text-xs">
-    <div><div class="text-gray-400">Lowest price seen</div><b class="text-white">${yen(lowP(c))}</b>${c.location?`<div class="text-gray-500">${esc(c.location)}</div>`:''}</div>
-    <div><div class="text-gray-400">eBay comp $${c.compUSD}</div><b class="${p>0?'text-emerald-300':'text-red-400'}">${p>0?'+':''}${yen(p)} profit</b></div>
-   </div>
+    <div class="flex justify-between gap-2 mt-2"><div class="font-bold text-white text-lg leading-snug">${esc(c.title)}</div><button data-a="watch" data-i="${i}" class="text-2xl leading-none ${isW(c)?'text-yellow-300':'text-gray-600'}" aria-label="Watchlist">★</button></div>
+   ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (ranks: ${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
+   ${bandBox(c,lowP(c),i,false)}
+   <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-emerald-400 text-black shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
+   <div class="text-xs text-gray-500">comp $${c.compUSD}${ageTxt(c)}${c.location?' | '+esc(c.location):''}</div>
    <div class="grid grid-cols-2 gap-2">
     <button class="btn bg-emerald-400 text-black" data-a="toInv" data-i="${i}">Add to inventory</button>
     <button class="btn bg-[#0b0c10] border border-white/10 text-cyan-300" data-a="toCart" data-i="${i}">Buy offer</button>
-    <button class="btn bg-[#0b0c10] border border-white/10 text-yellow-300 col-span-2" data-a="low" data-i="${i}">Update lowest price</button>
+    <button class="btn bg-[#0b0c10] border border-white/10 text-yellow-300 col-span-2" data-a="low" data-i="${i}">Update prices</button>
+    <a class="btn text-center bg-[#0b0c10] border border-white/10 text-sky-300 col-span-2" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold listings</a>
    </div></div>`}).join('')
  :`<div class="card sm:col-span-2 lg:col-span-3 text-center space-y-3"><div class="text-white font-bold">Nothing matches</div>
    <div class="text-xs text-gray-400">Add it to the comps database or straight into your inventory.</div>
@@ -266,8 +333,8 @@ function renderCart(){
  $('badge').textContent=cart.length;$('badge').classList.toggle('hidden',!cart.length);
  let pay=0,prof=0;
  $('cart').innerHTML=cart.length?cart.map((c,i)=>{pay+=c.offer;prof+=net(c)-c.offer;return `<tr>
-  <td><div class="text-white font-semibold">${esc(c.title)}</div><div class="text-xs text-gray-500">${esc(c.code)} | ${esc(c.console)}</div></td>
-  <td class="np font-mono">$${c.compUSD}</td><td class="np font-mono">${yen(net(c))}</td>
+  <td><div class="text-white font-semibold">${esc(c.title)}</div><div class="text-xs text-gray-500">${esc(c.code)} | ${esc(c.console)}</div><a class="np text-xs text-sky-300" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold</a></td>
+  <td class="np"><input type="number" min="0" step="0.01" value="${c.compUSD||''}" placeholder="?" data-comp="${i}" class="inp !w-24 font-mono"></td><td class="np font-mono">${yen(net(c))}</td>
   <td><input type="number" min="0" value="${c.offer}" data-offer="${i}" class="inp !w-28 font-mono text-cyan-300"></td>
   <td class="np font-mono ${net(c)-c.offer>=0?'text-emerald-300':'text-red-400'}">${yen(net(c)-c.offer)}</td>
   <td class="noprint"><button class="text-red-400" data-a="rm" data-i="${i}" aria-label="Remove">✕</button></td></tr>`}).join('')
@@ -277,37 +344,48 @@ function renderCart(){
 
 // ---- Tab 3 ----
 function renderInv(){
- const fc=$('fCon').value,fr=$('fRank').value;
- const rows=S.inv.filter(i=>(!fc||i.console===fc)&&(!fr||i.rank===fr));
- const spent=rows.reduce((a,i)=>a+i.paidJPY,0),gross=rows.reduce((a,i)=>a+i.compUSD*S.rate,0),nr=rows.reduce((a,i)=>a+net(i),0);
- const st=(l,v,s,c)=>`<div class="card"><div class="text-xs text-gray-400">${l}</div><div class="text-xl font-extrabold font-mono ${c}">${v}</div><div class="text-xs text-gray-500">${s}</div></div>`;
- $('stats').innerHTML=st('Items in stock',rows.length,'matching current filters','text-white')
-  +st('Total spent',yen(spent),'~$'+Math.round(spent/S.rate),'text-white')
-  +st('Projected eBay sales',yen(gross),'before '+S.fee+'% fee','text-cyan-300')
-  +st('Net profit',yen(nr-spent),'after fee','text-emerald-300');
- $('invBody').innerHTML=rows.length?rows.map(i=>{const p=net(i)-i.paidJPY;return `<tr>
-  <td><div class="text-white font-semibold">${esc(i.title)}</div><div class="text-xs text-cyan-300 font-mono">${esc(i.code)}</div></td>
-  <td>${esc(i.console)}</td><td>${esc(i.location||'-')}</td>
-  <td><span class="text-xs mr-1">${esc(i.format)}</span><span class="rk rk-${esc(i.rank)}">${esc(i.rank)}</span></td>
-  <td class="font-mono">${yen(i.paidJPY)}</td><td class="font-mono">$${i.compUSD}</td>
-  <td class="font-mono ${p>=0?'text-emerald-300':'text-red-400'}">${yen(p)}</td>
-  <td><button class="text-xs text-red-400" data-a="del" data-i="${esc(i.id)}">Delete</button></td></tr>`}).join('')
- :'<tr><td colspan="8" class="text-center text-gray-500 text-xs">Nothing in stock for these filters.</td></tr>';
+ const fc=$('fCon').value,fr=$('fRank').value,fs=$('fSt').value;
+ const sold=i=>i.status==='sold';
+ const prof=i=>(sold(i)?(+i.soldUSD||0)*S.rate*(1-S.fee/100):net(i))-i.paidJPY;
+ const rows=S.inv.filter(i=>(!fc||i.console===fc)&&(!fr||i.rank===fr)&&(!fs||(fs==='sold')===sold(i)));
+ if(fs==='old')rows.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ const days=i=>{const d=Math.floor(((sold(i)&&i.soldDate?new Date(i.soldDate):Date.now())-new Date(i.date))/864e5);return isNaN(d)?'':d};
+ const stock=rows.filter(i=>!sold(i)),done=rows.filter(sold);
+ const sum=(a,f)=>a.reduce((t,i)=>t+f(i),0);
+ const st=(l,v,sub,c)=>`<div class="card"><div class="text-xs text-gray-400">${l}</div><div class="text-xl font-extrabold font-mono ${c}">${v}</div><div class="text-xs text-gray-500">${sub}</div></div>`;
+ $('stats').innerHTML=st('In stock',stock.length,yen(sum(stock,i=>i.paidJPY))+' spent','text-white')
+  +st('Projected profit',yen(sum(stock,prof)),'unsold, after fee','text-cyan-300')
+  +st('Sold',done.length,'items','text-white')
+  +st('Realized profit',yen(sum(done,prof)),'from actual sales','text-emerald-300');
+ const m=$('mSel').value||today().slice(0,7);
+ const bought=S.inv.filter(i=>String(i.date).startsWith(m)),soldM=S.inv.filter(i=>sold(i)&&String(i.soldDate).startsWith(m));
+ const spentM=sum(bought,i=>i.paidJPY),salesM=sum(soldM,i=>(+i.soldUSD||0)*S.rate*(1-S.fee/100));
+ $('monthSum').innerHTML=st('Spent',yen(spentM),bought.length+' items bought','text-white')+st('Sales after fee',yen(salesM),soldM.length+' items sold','text-cyan-300')+st('Realized profit',yen(sum(soldM,prof)),'on items sold this month','text-emerald-300')+st('Sales minus spending',yen(salesM-spentM),'cash in minus out',salesM-spentM>=0?'text-emerald-300':'text-red-400');
+ const g={};S.inv.forEach(i=>{const k=i.location||'Unknown',o=g[k]=g[k]||{n:0,spent:0,p:0};o.n++;o.spent+=i.paidJPY;o.p+=prof(i)});
+ const list=Object.entries(g).sort((a,b)=>b[1].p-a[1].p);
+ $('storeSum').innerHTML=list.length?list.map(([k,v])=>`<div class="flex justify-between gap-3"><span class="text-white truncate">${esc(k)} <span class="text-gray-500 text-xs">${v.n} items</span></span><b class="font-mono ${v.p>=0?'text-emerald-300':'text-red-400'}">${yen(v.p)} <span class="text-xs text-gray-500">${v.spent?Math.round(v.p/v.spent*100):0}%</span></b></div>`).join(''):'<div class="text-xs text-gray-500">Add items to see which stores pay off.</div>';
+ const act=i=>sold(i)?'<span class="text-xs text-emerald-300 mr-3">Sold $'+(+i.soldUSD||0)+'</span>':`<button class="text-xs text-emerald-300 mr-3" data-a="sold" data-i="${esc(i.id)}">Mark sold</button>`;
+ const dl=i=>`<button class="text-xs text-red-400" data-a="del" data-i="${esc(i.id)}">Delete</button>`;
+ const none='Nothing here for these filters.';
+ $('invBody').innerHTML=rows.length?rows.map(i=>{const p=prof(i);return `<tr><td><div class="text-white font-semibold">${esc(i.title)}</div><div class="text-xs text-cyan-300 font-mono">${esc(i.code)}</div></td><td>${esc(i.console)}</td><td>${esc(i.location||'-')}</td><td><span class="text-xs mr-1">${esc(i.format)}</span><span class="rk rk-${esc(i.rank)}">${esc(i.rank)}</span></td><td class="font-mono">${yen(i.paidJPY)}</td><td class="font-mono">$${i.compUSD}</td><td class="font-mono ${p>=0?'text-emerald-300':'text-red-400'}">${yen(p)}</td><td class="font-mono ${!sold(i)&&days(i)>60?'text-amber-300':''}">${days(i)}${sold(i)?' (sold)':''}</td><td class="whitespace-nowrap">${act(i)}${dl(i)}</td></tr>`}).join(''):'<tr><td colspan="9" class="text-center text-gray-500 text-xs">'+none+'</td></tr>';
+ $('invCards').innerHTML=rows.length?rows.map(i=>{const p=prof(i);return `<details class="card !p-3"><summary class="flex justify-between items-center gap-3 list-none"><div class="min-w-0"><div class="text-white font-semibold truncate">${esc(i.title)}</div><div class="text-xs text-gray-400">${esc(i.console)} | paid ${yen(i.paidJPY)}${sold(i)?' | sold in '+days(i)+'d':' | '+days(i)+'d in stock'}</div></div><b class="font-mono ${p>=0?'text-emerald-300':'text-red-400'}">${yen(p)}</b></summary><div class="mt-3 text-xs text-gray-400 space-y-2"><div>${esc(i.code)} | ${esc(i.format)} <span class="rk rk-${esc(i.rank)}">${esc(i.rank)}</span></div><div>Bought at ${esc(i.location||'-')} | comp $${i.compUSD}</div><div>${act(i)}${dl(i)}</div></div></details>`}).join(''):'<div class="text-center text-xs text-gray-500">'+none+'</div>';
 }
 
 // ---- Form ----
 function openForm(mode,item){
  formMode=mode;
- $('formTitle').textContent=mode==='comp'?'Add to comps database':'Add to my inventory';
+ $('formTitle').textContent=mode==='comp'?'Add to comps database':mode==='cart'?'Add item to offer list':'Add to my inventory';
  $('f_priceLbl').textContent=mode==='comp'?'Shop price (JPY)':'Price paid (JPY)';
  $('f_locLbl').textContent=mode==='comp'?'Seen at':'Bought at';
+ $('locBox').classList.toggle('hidden',mode==='cart');$('priceBox').classList.toggle('hidden',mode==='cart');$('saveCompBox').classList.toggle('hidden',mode!=='cart');
  $('f_title').value=item?.title||'';$('f_code').value=item?.code||'';
  $('f_con').value=item?.console||CON[0];
- $('f_price').value=(item&&lowP(item))||1000;$('f_comp').value=item?.compUSD??30;
+ $('f_price').value=(item&&lowP(item))||1000;$('f_comp').value=item?.compUSD??'';
  $('f_fmt').value=item?.format||'CIB';$('f_rank').value=item?.rank||'B';$('f_loc').value=S.loc||'';
- margin();$('formM').classList.remove('hidden');$('f_title').focus();autoLoc('f_loc');
+ margin();$('formM').classList.remove('hidden');$('f_title').focus();if(mode!=='cart')autoLoc('f_loc');
 }
 function margin(){
+ if(formMode==='cart'){if(!(+$('f_comp').value>0)){$('f_margin').textContent='No comp yet. The offer starts at ¥0, so set it in the list and add the comp later.';return}$('f_margin').innerHTML='Your offer: <b class="text-cyan-300">'+yen(defOffer({compUSD:+$('f_comp').value||0}))+'</b> ('+S.offer+'% of resale after fee). You can change it in the list.';return}
  const p=net({compUSD:+$('f_comp').value||0})-(+$('f_price').value||0);
  $('f_margin').innerHTML='Estimated profit after fee: <b class="'+(p>=0?'text-emerald-300':'text-red-400')+'">'+yen(p)+'</b>';
 }
@@ -315,15 +393,22 @@ function saveForm(){
  const o={title:$('f_title').value.trim(),code:$('f_code').value.trim().toUpperCase(),console:$('f_con').value,
   format:$('f_fmt').value,rank:$('f_rank').value,compUSD:+$('f_comp').value||0};
  if(!o.title)return toast('Enter a title',false);
+ if(formMode==='cart'){
+  o.storePriceJPY=0;o.lowestJPY=0;
+  if($('f_saveComp').checked&&!S.comps.some(c=>c.console===o.console&&c.format===o.format&&(o.code?c.code===o.code:c.title===o.title))){
+   const cc={...o,location:'',compDate:o.compUSD?today():''};S.comps.unshift(cc);post('addComp',cc);
+  }
+  cart.push({...o,offer:defOffer(o)});renderCart();save();
+  $('formM').classList.add('hidden');toast('Added '+o.title+' to offer list');return;
+ }
  const price=+$('f_price').value||0,loc=$('f_loc').value.trim();
  if(formMode==='comp'){
-  if(!o.code)return toast('Enter a catalog code',false);
-  o.storePriceJPY=price;o.lowestJPY=price;o.location=loc;
-  const k=S.comps.findIndex(c=>c.code===o.code&&c.console===o.console);
+  o.storePriceJPY=price;o.lowestJPY=price;o.location=loc;o.compDate=o.compUSD?today():'';
+  const k=S.comps.findIndex(c=>c.console===o.console&&c.format===o.format&&(o.code?c.code===o.code:c.title===o.title));
   k>-1?S.comps[k]=o:S.comps.unshift(o);
   post('addComp',o);search1();
  }else{
-  o.id='INV-'+Date.now();o.paidJPY=price;o.location=$('f_loc').value.trim()||'Unknown';o.date=new Date().toISOString().slice(0,10);
+  o.id='INV-'+Date.now();o.paidJPY=price;o.location=$('f_loc').value.trim()||'Unknown';o.date=today();
   S.loc=$('f_loc').value.trim();S.inv.unshift(o);post('addInv',{items:[o]});renderInv();
  }
  rememberStore(loc);save();$('formM').classList.add('hidden');toast('Saved '+o.title);
@@ -344,37 +429,37 @@ const A={
  toCart:i=>{addCart(+i)},
  rm:i=>{cart.splice(i,1);renderCart()},
  clear:()=>{cart=[];renderCart()},
- print:()=>cart.length?window.print():toast('Nothing to print',false),
+ print:()=>cart.length?($('pDate').textContent=new Date().toLocaleDateString('ja-JP'),window.print()):toast('Nothing to print',false),
  accept:()=>{
   if(!cart.length)return toast('Offer list is empty',false);
-  const d=new Date().toISOString().slice(0,10);
+  const d=today();
   const items=cart.map((c,k)=>({id:'INV-'+Date.now()+'-'+k,code:c.code,title:c.title,console:c.console,paidJPY:c.offer,format:c.format,rank:c.rank,compUSD:c.compUSD,location:'Customer trade-in',date:d}));
   S.inv.unshift(...items);post('addInv',{items});save();
   toast('Added '+items.length+' items to inventory');cart=[];renderCart();showTab('t3');
  },
  del:id=>{if(!confirm('Delete this item from inventory?'))return;S.inv=S.inv.filter(i=>i.id!==id);post('delInv',{id});save();renderInv()},
  csv:()=>{
-  const h=['id','code','title','console','format','rank','paidJPY','compUSD','location','date'];
+  const h=['id','code','title','console','format','rank','paidJPY','compUSD','location','date','status','soldUSD','soldDate'];
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const t=[h.join(','),...S.inv.map(i=>h.map(k=>q(i[k])).join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/csv'}));a.download='rocket-hub-inventory.csv';a.click();
  },
- settings:()=>{$('s_url').value=S.url;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('setM').classList.toggle('hidden')},
+ settings:()=>{$('s_url').value=S.url;$('s_pw').value=S.pw;$('s_auto').checked=S.autoRate;$('s_minp').value=S.minP;$('s_minpct').value=S.minPct;$('s_bigp').value=S.bigP;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('setM').classList.toggle('hidden')},
  saveSet:()=>{
-  S.url=$('s_url').value.trim();S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||13;S.offer=+$('s_off').value||70;
-  save();$('setM').classList.add('hidden');labels();renderAll();sync();toast('Settings saved');
+  S.url=$('s_url').value.trim();S.pw=$('s_pw').value;S.autoRate=$('s_auto').checked;if(S.autoRate)S.rateDate='';S.minP=+$('s_minp').value||0;S.minPct=+$('s_minpct').value||0;S.bigP=+$('s_bigp').value||0;S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||15;S.offer=+$('s_off').value||70;
+  save();$('setM').classList.add('hidden');labels();renderAll();sync();updateRate();toast('Settings saved');
  },
  closeForm:()=>$('formM').classList.add('hidden'),
  saveForm
 };
-let scanner=null,scanCb=null;
-function openScan(cb){
+let scanner=null,scanCb=null,lastCode='',lastT=0;
+function openScan(cb,multi){warmLoc();
  if(typeof Html5Qrcode==='undefined')return toast('Scanner failed to load. Check your connection and reload.',false);
- scanCb=cb;$('scanM').classList.remove('hidden');
+ scanCb=cb;$('scanInfo').textContent='';$('scanM').classList.remove('hidden');
  const F=Html5QrcodeSupportedFormats;
  scanner=new Html5Qrcode('scanBox',{formatsToSupport:[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128,F.CODE_39],useBarCodeDetectorIfSupported:true});
  scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:140}},
-  txt=>{const f=scanCb;closeScan();if(f)f(txt)},()=>{})
+  txt=>{if(multi){const n=Date.now();if(txt===lastCode&&n-lastT<2500)return;lastCode=txt;lastT=n;if(navigator.vibrate)navigator.vibrate(80);scanCb(txt);return}const f=scanCb;closeScan();if(f)f(txt)},()=>{})
   .catch(()=>{toast('Camera unavailable. Allow camera access for this site in your browser settings.',false);closeScan()});
 }
 function closeScan(){
@@ -382,7 +467,7 @@ function closeScan(){
  if(scanner){const s=scanner;scanner=null;s.stop().then(()=>s.clear()).catch(()=>{})}
 }
 A.scan=t=>openScan(v=>{
- if(t==='q1'){$('q1').value=v;con='All';pills();search1()}
+ if(t==='q1'){$('q1').value=v;con='All';pills();window._sc=1;search1();if(hits.length===1){const e=$('px'+hits[0]);if(e)e.focus()}}
  else if(t==='q2'){$('q2').value=v;search2()}
  else $(t).value=v;
  toast('Scanned '+v);
@@ -421,10 +506,51 @@ function rememberStore(name){
 }
 ['f_loc','low_loc'].forEach(id=>$(id).addEventListener('input',e=>e.target.dataset.touched='1'));
 A.gps=id=>autoLoc(id,true);
+A.multi=()=>openScan(v=>{
+ const c=S.comps.find(x=>x.code===v);
+ if(c){cart.push({...c,offer:defOffer(c)});renderCart();$('scanInfo').textContent=(ownN(c).length?'📦 YOU HAVE '+ownN(c).length+' ALREADY. ':'')+(isW(c)?'★ WATCHLIST: ':'')+'Added: '+c.title+' ('+cart.length+' on list)'}
+ else $('scanInfo').textContent='Not in database: '+v+' (add it by hand afterwards)';
+},true);
+function renderWatch(){
+ $('wCount').textContent='('+S.watch.length+')';
+ $('wList').innerHTML=S.watch.length?S.watch.map((w,i)=>`<div class="flex justify-between items-center gap-3 text-sm"><button class="text-white text-left truncate" data-a="wfind" data-i="${i}">${esc(w.title)} <span class="text-gray-500">${esc(w.console)}</span></button><button class="text-red-400 text-xs" data-a="unwatch" data-i="${i}">Remove</button></div>`).join(''):'<div class="text-xs text-gray-500">Tap the ★ on any result to hunt for it.</div>';
+}
+A.watch=i=>{const c=S.comps[i],k=wk(c),x=S.watch.findIndex(w=>w.k===k);
+ if(x>-1)S.watch.splice(x,1);else S.watch.push({k,title:c.title,console:c.console,code:c.code});
+ save();renderWatch();search1()};
+A.unwatch=i=>{S.watch.splice(i,1);save();renderWatch();search1()};
+A.wfind=i=>{const w=S.watch[i];$('q1').value=w.code||w.title;con='All';pills();search1()};
+A.quick=i=>{
+ const c=S.comps[i],el=$('px'+i),v=+el.value;
+ if(!(v>0)){toast('Type the shelf price first',false);el.focus();return}
+ const name=(Date.now()-here.t<6e5&&here.name)||S.loc||'Unknown';
+ const it={id:'INV-'+Date.now(),code:c.code,title:c.title,console:c.console,paidJPY:v,format:c.format||'CIB',rank:$('rk'+i).value,compUSD:c.compUSD,location:name,date:today(),status:'',soldUSD:'',soldDate:''};
+ S.inv.unshift(it);if(here.name&&name===here.name){S.loc=name;rememberStore(name)}
+ post('addInv',{items:[it]});save();renderInv();
+ search1();
+ toast('Added '+c.title+' for '+yen(v)+' at '+name);
+};
+document.addEventListener('input',e=>{const k=e.target.dataset.px;if(k===undefined)return;
+ const c=S.comps[k],v=+e.target.value;$('band'+k).outerHTML=bandBox(c,v>0?v:lowP(c),k,v>0)});
+A.fe=()=>{const t=$('f_title').value.trim();if(!t)return toast('Enter a title first',false);window.open(ebay({title:t,format:$('f_fmt').value}),'_blank')};
+A.fe2=()=>window.open(ebay(S.comps[lowIdx]),'_blank');
+let lastDel=null;
+A.del=id=>{
+ lastDel=S.inv.find(i=>i.id===id);S.inv=S.inv.filter(i=>i.id!==id);post('delInv',{id});save();renderInv();
+ toast('');const t=$('toast');t.innerHTML='Item deleted <button class="ml-3 text-cyan-300 font-bold" data-a="undo">Undo</button>';
+ clearTimeout(t._t);t._t=setTimeout(()=>t.classList.add('hidden'),7000);
+};
+A.undo=()=>{if(!lastDel)return;S.inv.unshift(lastDel);post('addInv',{items:[lastDel]});lastDel=null;save();renderInv();$('toast').classList.add('hidden')};
+A.sold=id=>{
+ const it=S.inv.find(i=>i.id===id),v=prompt('Sold for how many USD? (before eBay fee)');
+ if(v===null)return;const n=+v;if(!(n>0))return toast('Enter the sale price',false);
+ const f={status:'sold',soldUSD:n,soldDate:today()};Object.assign(it,f);post('updateInv',{id,fields:f});save();renderInv();toast('Marked as sold');
+};
+A.addManual=()=>{const q=$('q2').value.trim();openForm('cart',/^\d{8,14}$/.test(q)?{code:q,compUSD:''}:{title:q,compUSD:''})};
 let lowIdx=-1;
 A.low=i=>{lowIdx=+i;const c=S.comps[lowIdx];
  $('lowItem').textContent=c.title+' ('+c.console+') - now '+yen(lowP(c));
- $('low_price').value=lowP(c)||'';$('low_loc').value=S.loc||'';
+ $('low_price').value=lowP(c)||'';$('low_comp').value=c.compUSD||'';$('low_loc').value=S.loc||'';
  $('lowM').classList.remove('hidden');$('low_price').select();autoLoc('low_loc')};
 A.closeLow=()=>$('lowM').classList.add('hidden');
 A.saveLow=()=>{
@@ -432,23 +558,38 @@ A.saveLow=()=>{
  if(!(v>0))return toast('Enter the new price',false);
  const loc=$('low_loc').value.trim();
  c.lowestJPY=v;if(loc){c.location=loc;S.loc=loc;rememberStore(loc)}
- post('updateLow',{code:c.code,title:c.title,console:c.console,lowestJPY:v,location:loc});
+ const nc=+$('low_comp').value||0,ex={};
+ if(nc!==c.compUSD){c.compUSD=nc;c.compDate=today();ex.compUSD=nc;ex.compDate=c.compDate}
+ post('updateLow',{code:c.code,title:c.title,console:c.console,format:c.format,lowestJPY:v,location:loc,...ex});
  save();A.closeLow();search1();toast('Lowest price updated to '+yen(v));
 };
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)A[b.dataset.a](b.dataset.i)});
 document.addEventListener('change',e=>{
- const o=e.target.dataset.offer;if(o!==undefined){cart[o].offer=Math.max(0,+e.target.value||0);renderCart()}
+ const o=e.target.dataset.offer;if(o!==undefined){cart[o].offer=Math.max(0,+e.target.value||0);cart[o].manual=true;renderCart()}
+ const k=e.target.dataset.comp;
+ if(k!==undefined){
+  const c=cart[k];c.compUSD=Math.max(0,+e.target.value||0);
+  if(!c.manual)c.offer=defOffer(c);
+  const db=S.comps.find(x=>x.console===c.console&&x.format===c.format&&(c.code?x.code===c.code:x.title===c.title));
+  if(db&&!db.compUSD&&c.compUSD){db.compUSD=c.compUSD;db.compDate=today();post('addComp',db);save()}
+  renderCart();
+ }
 });
 ['f_price','f_comp'].forEach(id=>$(id).addEventListener('input',margin));
 $('q1').addEventListener('input',search1);$('q2').addEventListener('input',search2);
-$('fCon').addEventListener('change',renderInv);$('fRank').addEventListener('change',renderInv);
+$('fSt').addEventListener('change',renderInv);$('mSel').addEventListener('change',renderInv);$('fCon').addEventListener('change',renderInv);$('fRank').addEventListener('change',renderInv);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('lowM').classList.add('hidden');$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
 
-function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1';$('offLbl').textContent='('+S.offer+'% of net after '+S.fee+'% fee)'}
-function renderAll(){pills();search1();search2();renderCart();renderInv()}
+function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1'+(S.autoRate?' (auto)':'');$('offLbl').textContent='('+S.offer+'% of net after '+S.fee+'% fee)'}
+function renderAll(){pills();search1();search2();renderCart();renderInv();renderWatch()}
 
 CON.forEach(c=>{['f_con','fCon'].forEach(id=>{const o=document.createElement('option');o.value=o.textContent=c;$(id).appendChild(o)})});
+$('mSel').value=today().slice(0,7);
 labels();renderAll();sync();
+window.addEventListener('online',()=>{sync();updateRate()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateRate();warmLoc()}});
+updateRate();warmLoc();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
