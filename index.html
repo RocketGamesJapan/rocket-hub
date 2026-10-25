@@ -271,8 +271,9 @@ function sync(){
  fetch(S.url+'?pw='+encodeURIComponent(S.pw)).then(r=>r.json()).then(d=>{
   if(d.error){setSync(d.error==='auth'?'Wrong passcode':'Server error');return}
   if(d.comps&&d.comps.length)S.comps=d.comps.map(c=>({...c,storePriceJPY:+c.storePriceJPY,lowestJPY:+c.lowestJPY,compUSD:+c.compUSD}));
-  if(d.inv)S.inv=d.inv.map(c=>({...c,paidJPY:+c.paidJPY,compUSD:+c.compUSD}));
-  save();renderAll();setSync('Synced');
+  const kept=!d.inv||(d.inv.length===0&&S.inv.length>0);
+  if(!kept)S.inv=d.inv.map(c=>({...c,paidJPY:+c.paidJPY,compUSD:+c.compUSD}));
+  save();renderAll();setSync(kept&&S.inv.length?'Sheet has no inventory - kept phone copy':'Synced');
  }).catch(()=>setSync('Offline - using saved data'));
 }
 
