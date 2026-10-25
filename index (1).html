@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rocket Hub POS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+body{font-family:Inter,sans-serif;background:#0b0c10;color:#e5e7eb}
+.card{@apply bg-[#12131C] border border-white/10 rounded-2xl p-4}
+.inp{@apply w-full px-3 py-2 bg-[#0b0c10] border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-violet-500}
+.btn{@apply px-3 py-2 rounded-xl text-xs font-bold transition}
+.lbl{@apply block text-xs text-gray-400 mb-1}
+.tab{@apply px-3 py-2 rounded-lg text-xs font-bold text-gray-400}
+.tab.on{@apply bg-violet-600 text-white}
+.pill{@apply px-3 py-1 rounded-xl text-xs border border-white/10 text-gray-400 whitespace-nowrap}
+.pill.on{@apply bg-violet-600 text-white border-violet-600}
+.rk{@apply text-xs font-bold px-2 py-0.5 rounded-full border}
+.rk-S{@apply text-yellow-300 border-yellow-300/40 bg-yellow-300/10}
+.rk-A{@apply text-emerald-300 border-emerald-300/40 bg-emerald-300/10}
+.rk-B{@apply text-cyan-300 border-cyan-300/40 bg-cyan-300/10}
+.rk-C{@apply text-orange-300 border-orange-300/40 bg-orange-300/10}
+.rk-D{@apply text-red-400 border-red-400/40 bg-red-400/10}
+th{@apply py-2 px-3 text-xs font-semibold text-gray-400 text-left}
+td{@apply py-2.5 px-3}
+@media print{header,.noprint,.np{display:none!important}body{background:#fff;color:#000}.card{border:0;background:#fff}}
+</style>
+</head>
+<body class="min-h-screen pb-16">
+<header class="sticky top-0 z-30 bg-[#0b0c10]/95 border-b border-white/10 px-4 py-3">
+ <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+  <div class="font-extrabold text-white">🚀 Rocket Hub <span class="text-gray-500 font-normal text-sm">Scout & Inventory</span></div>
+  <nav class="flex gap-1 bg-[#12131C] p-1 rounded-xl">
+   <button class="tab on" data-a="tab" data-i="t1">Stock lookup</button>
+   <button class="tab" data-a="tab" data-i="t2">Buy offers <span id="badge" class="hidden ml-1 bg-pink-600 text-white rounded-full px-1.5">0</span></button>
+   <button class="tab" data-a="tab" data-i="t3">Inventory</button>
+  </nav>
+  <div class="flex items-center gap-3 text-xs text-gray-400">
+   <span id="sync">Local only</span><span id="rateLbl"></span>
+   <button class="btn bg-[#12131C] border border-white/10" data-a="settings">Settings</button>
+  </div>
+ </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 pt-5 space-y-5">
+
+<section id="t1" class="space-y-4">
+ <div class="card space-y-3">
+  <div class="flex gap-2">
+   <input id="q1" class="inp" placeholder="Title, catalog code or JAN barcode" autocomplete="off">
+   <button class="btn bg-violet-600 text-white" data-a="add" data-i="comp">New comp</button>
+  </div>
+  <div id="pills" class="flex gap-2 overflow-x-auto pb-1"></div>
+ </div>
+ <div id="count" class="text-sm text-gray-400"></div>
+ <div id="grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+</section>
+
+<section id="t2" class="space-y-4 hidden">
+ <div class="card space-y-3 noprint">
+  <div class="text-sm font-bold text-white">Customer buy offer <span id="offLbl" class="text-cyan-300"></span></div>
+  <input id="q2" class="inp" placeholder="Search what the customer wants to sell" autocomplete="off">
+  <div id="res2" class="space-y-2"></div>
+ </div>
+ <div class="card space-y-3">
+  <div class="flex justify-between items-center">
+   <div class="font-bold text-white">Offer list</div>
+   <button class="btn text-red-400 noprint" data-a="clear">Clear</button>
+  </div>
+  <div class="overflow-x-auto"><table class="w-full text-sm">
+   <thead><tr><th>Item</th><th class="np">eBay comp</th><th class="np">Net after fee</th><th>Offer (¥)</th><th class="np">Profit</th><th class="noprint"></th></tr></thead>
+   <tbody id="cart" class="divide-y divide-white/10"></tbody>
+  </table></div>
+  <div class="flex flex-wrap justify-between items-center gap-3 border-t border-white/10 pt-3">
+   <div class="text-sm"><span class="text-gray-400">Total offer</span> <b id="tPay" class="text-cyan-300 text-xl ml-1">¥0</b>
+    <span class="np ml-4 text-gray-400">Est. profit <b id="tProfit" class="text-emerald-300">¥0</b></span></div>
+   <div class="flex gap-2 noprint">
+    <button class="btn bg-[#0b0c10] border border-white/10" data-a="print">Print offer</button>
+    <button class="btn bg-emerald-400 text-black" data-a="accept">Accept and add to inventory</button>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section id="t3" class="space-y-4 hidden">
+ <div id="stats" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+ <div class="card space-y-3">
+  <div class="flex flex-wrap gap-2 justify-between">
+   <div class="flex gap-2">
+    <select id="fCon" class="inp !w-auto"><option value="">All consoles</option></select>
+    <select id="fRank" class="inp !w-auto"><option value="">All ranks</option><option>S</option><option>A</option><option>B</option><option>C</option><option>D</option></select>
+   </div>
+   <div class="flex gap-2">
+    <button class="btn bg-violet-600 text-white" data-a="add" data-i="inv">Add item</button>
+    <button class="btn bg-[#0b0c10] border border-white/10" data-a="csv">Export CSV</button>
+   </div>
+  </div>
+  <div class="overflow-x-auto"><table class="w-full text-sm">
+   <thead><tr><th>Title</th><th>Console</th><th>Bought at</th><th>Grade</th><th>Paid</th><th>Comp</th><th>Net profit</th><th></th></tr></thead>
+   <tbody id="invBody" class="divide-y divide-white/10"></tbody>
+  </table></div>
+ </div>
+</section>
+</main>
+
+<div id="toast" class="fixed bottom-5 right-5 z-50 hidden px-4 py-3 rounded-xl bg-[#12131C] border border-violet-500 text-sm"></div>
+
+<!-- Item form (used for both comps and inventory) -->
+<div id="formM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto">
+ <div class="card max-w-lg mx-auto space-y-3 mt-6">
+  <div id="formTitle" class="font-bold text-white"></div>
+  <div><label class="lbl">Title</label><input id="f_title" class="inp"></div>
+  <div class="grid grid-cols-2 gap-3">
+   <div><label class="lbl">Catalog code / JAN</label><input id="f_code" class="inp"></div>
+   <div><label class="lbl">Console</label><select id="f_con" class="inp"></select></div>
+  </div>
+  <div class="grid grid-cols-4 gap-3">
+   <div class="col-span-2"><label id="f_priceLbl" class="lbl"></label><input id="f_price" type="number" min="0" class="inp"></div>
+   <div><label class="lbl">Comp (USD)</label><input id="f_comp" type="number" min="0" step="0.01" class="inp"></div>
+   <div><label class="lbl">Format</label><select id="f_fmt" class="inp"><option>CIB</option><option>Loose</option></select></div>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+   <div><label class="lbl">Rank</label><select id="f_rank" class="inp"><option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option></select></div>
+   <div id="locBox"><label class="lbl">Bought at</label><input id="f_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata">
+    <datalist id="stores"><option>Book Off Nogata</option><option>Manga Soukou</option><option>Surugaya</option><option>Hard Off</option><option>Mercari JP</option><option>Yahoo Auctions</option></datalist></div>
+  </div>
+  <div id="f_margin" class="text-sm text-gray-400"></div>
+  <div class="flex justify-end gap-2">
+   <button class="btn bg-[#0b0c10]" data-a="closeForm">Cancel</button>
+   <button class="btn bg-violet-600 text-white" data-a="saveForm">Save</button>
+  </div>
+ </div>
+</div>
+
+<div id="setM" class="fixed inset-0 z-40 hidden bg-black/80 p-4">
+ <div class="card max-w-md mx-auto space-y-3 mt-10">
+  <div class="font-bold text-white">Settings</div>
+  <div><label class="lbl">Google Apps Script web app URL (leave empty to work offline)</label><input id="s_url" class="inp font-mono text-xs"></div>
+  <div class="grid grid-cols-3 gap-3">
+   <div><label class="lbl">¥ per $1</label><input id="s_rate" type="number" class="inp"></div>
+   <div><label class="lbl">eBay fee %</label><input id="s_fee" type="number" class="inp"></div>
+   <div><label class="lbl">Offer % of net</label><input id="s_off" type="number" class="inp"></div>
+  </div>
+  <div class="flex justify-end gap-2">
+   <button class="btn bg-[#0b0c10]" data-a="settings">Cancel</button>
+   <button class="btn bg-violet-600 text-white" data-a="saveSet">Save settings</button>
+  </div>
+ </div>
+</div>
+
+<script>
+const CON=["3DS","Dreamcast","DS","Famicom","GBA","Game Boy","Game Boy Color","Gamecube","MegaDrive","N64","PS1","PS2","PSP","Saturn","SFC","Vita","Wii"];
+const SEED=[
+ {code:"HDR-0159",title:"Crazy Taxi 2",console:"Dreamcast",storePriceJPY:1500,format:"CIB",rank:"A",compUSD:35},
+ {code:"T-1201M",title:"Sonic the Hedgehog",console:"MegaDrive",storePriceJPY:1800,format:"CIB",rank:"A",compUSD:42},
+ {code:"SLPS-01556",title:"LSD: Dream Emulator",console:"PS1",storePriceJPY:45000,format:"CIB",rank:"S",compUSD:520},
+ {code:"SLPS-01762",title:"Pepsiman",console:"PS1",storePriceJPY:12000,format:"CIB",rank:"A",compUSD:160},
+ {code:"AGB-AXPE-JPN",title:"Pokemon Emerald",console:"GBA",storePriceJPY:4800,format:"Loose",rank:"B",compUSD:85},
+ {code:"SHVC-MK",title:"Super Mario Kart",console:"SFC",storePriceJPY:980,format:"Loose",rank:"C",compUSD:24},
+ {code:"NUS-CLVJ-JPN",title:"Castlevania: Legacy of Darkness",console:"N64",storePriceJPY:8900,format:"CIB",rank:"B",compUSD:130},
+ {code:"SLPM-65719",title:"Berserk: Millennium Falcon Arc",console:"PS2",storePriceJPY:3500,format:"CIB",rank:"A",compUSD:58}];
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
+const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
+const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',13),offer:load('offer',70),
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc','')};
+const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
+let cart=[],hits=[],con='All',formMode='comp';
+
+const net=i=>i.compUSD*S.rate*(1-S.fee/100);
+const defOffer=i=>Math.round(net(i)*S.offer/100);
+
+function toast(m,ok=true){const t=$('toast');t.textContent=m;t.style.borderColor=ok?'#8b5cf6':'#ef4444';t.classList.remove('hidden');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.add('hidden'),2800)}
+function setSync(s){$('sync').textContent=s}
+
+// ---- Google Sheet sync (reads with GET, writes with POST) ----
+function post(action,data){
+ if(!S.url)return;
+ fetch(S.url,{method:'POST',mode:'no-cors',body:JSON.stringify({action,...data})})
+  .then(()=>setSync('Synced')).catch(()=>setSync('Sync failed - saved locally'));
+}
+function sync(){
+ if(!S.url)return setSync('Local only');
+ setSync('Syncing...');
+ fetch(S.url).then(r=>r.json()).then(d=>{
+  if(d.comps&&d.comps.length)S.comps=d.comps.map(c=>({...c,storePriceJPY:+c.storePriceJPY,compUSD:+c.compUSD}));
+  if(d.inv)S.inv=d.inv.map(c=>({...c,paidJPY:+c.paidJPY,compUSD:+c.compUSD}));
+  save();renderAll();setSync('Synced');
+ }).catch(()=>setSync('Offline - using saved data'));
+}
+
+// ---- Tab 1 ----
+function pills(){
+ $('pills').innerHTML=['All',...CON].map(c=>`<button class="pill ${c===con?'on':''}" data-a="con" data-i="${esc(c)}">${esc(c)}</button>`).join('');
+}
+function search1(){
+ const q=$('q1').value.trim().toLowerCase();
+ hits=S.comps.map((c,i)=>i).filter(i=>{const c=S.comps[i];return(con==='All'||c.console===con)&&(!q||(c.title+' '+c.code).toLowerCase().includes(q))});
+ $('count').textContent=hits.length+' in comps database';
+ $('grid').innerHTML=hits.length?hits.map(i=>{
+  const c=S.comps[i],p=net(c)-c.storePriceJPY;
+  return `<div class="card space-y-3 flex flex-col justify-between">
+   <div><div class="flex justify-between gap-2 text-xs"><span class="font-mono text-cyan-300">${esc(c.code)}</span>
+    <span><span class="text-gray-400 mr-1">${esc(c.format)}</span><span class="rk rk-${esc(c.rank)}">${esc(c.rank)}</span></span></div>
+    <div class="font-bold text-white mt-2">${esc(c.title)}</div><div class="text-xs text-gray-400">${esc(c.console)}</div></div>
+   <div class="grid grid-cols-2 gap-2 text-xs">
+    <div><div class="text-gray-400">Shop price</div><b class="text-white">${yen(c.storePriceJPY)}</b></div>
+    <div><div class="text-gray-400">eBay comp $${c.compUSD}</div><b class="${p>0?'text-emerald-300':'text-red-400'}">${p>0?'+':''}${yen(p)} profit</b></div>
+   </div>
+   <div class="grid grid-cols-2 gap-2">
+    <button class="btn bg-emerald-400 text-black" data-a="toInv" data-i="${i}">Add to inventory</button>
+    <button class="btn bg-[#0b0c10] border border-white/10 text-cyan-300" data-a="toCart" data-i="${i}">Buy offer</button>
+   </div></div>`}).join('')
+ :`<div class="card sm:col-span-2 lg:col-span-3 text-center space-y-3"><div class="text-white font-bold">Nothing matches</div>
+   <div class="text-xs text-gray-400">Add it to the comps database or straight into your inventory.</div>
+   <div class="flex justify-center gap-2"><button class="btn bg-violet-600 text-white" data-a="add" data-i="comp">New comp</button>
+   <button class="btn bg-emerald-400 text-black" data-a="add" data-i="inv">Add to inventory</button></div></div>`;
+}
+
+// ---- Tab 2 ----
+function search2(){
+ const q=$('q2').value.trim().toLowerCase();
+ if(!q){$('res2').innerHTML='<div class="text-xs text-gray-500">Type a title or code to see the offer.</div>';return}
+ const m=S.comps.map((c,i)=>i).filter(i=>(S.comps[i].title+' '+S.comps[i].code).toLowerCase().includes(q)).slice(0,20);
+ $('res2').innerHTML=m.length?m.map(i=>{const c=S.comps[i];return `<div class="flex items-center justify-between gap-3 bg-[#0b0c10] rounded-xl p-3">
+  <div><div class="text-white text-sm font-semibold">${esc(c.title)} <span class="text-gray-400 font-normal">(${esc(c.console)}, ${esc(c.format)})</span></div>
+  <div class="text-xs text-gray-400">${esc(c.code)} | comp $${c.compUSD} | offer <b class="text-cyan-300">${yen(defOffer(c))}</b></div></div>
+  <button class="btn bg-cyan-400 text-black shrink-0" data-a="toCart" data-i="${i}">Add</button></div>`}).join('')
+ :'<div class="text-xs text-red-400">No match in the comps database.</div>';
+}
+function renderCart(){
+ $('badge').textContent=cart.length;$('badge').classList.toggle('hidden',!cart.length);
+ let pay=0,prof=0;
+ $('cart').innerHTML=cart.length?cart.map((c,i)=>{pay+=c.offer;prof+=net(c)-c.offer;return `<tr>
+  <td><div class="text-white font-semibold">${esc(c.title)}</div><div class="text-xs text-gray-500">${esc(c.code)} | ${esc(c.console)}</div></td>
+  <td class="np font-mono">$${c.compUSD}</td><td class="np font-mono">${yen(net(c))}</td>
+  <td><input type="number" min="0" value="${c.offer}" data-offer="${i}" class="inp !w-28 font-mono text-cyan-300"></td>
+  <td class="np font-mono ${net(c)-c.offer>=0?'text-emerald-300':'text-red-400'}">${yen(net(c)-c.offer)}</td>
+  <td class="noprint"><button class="text-red-400" data-a="rm" data-i="${i}" aria-label="Remove">✕</button></td></tr>`}).join('')
+ :'<tr><td colspan="6" class="text-center text-gray-500 text-xs">No items yet. Add items from Stock lookup or search above.</td></tr>';
+ $('tPay').textContent=yen(pay);$('tProfit').textContent=yen(prof);
+}
+
+// ---- Tab 3 ----
+function renderInv(){
+ const fc=$('fCon').value,fr=$('fRank').value;
+ const rows=S.inv.filter(i=>(!fc||i.console===fc)&&(!fr||i.rank===fr));
+ const spent=rows.reduce((a,i)=>a+i.paidJPY,0),gross=rows.reduce((a,i)=>a+i.compUSD*S.rate,0),nr=rows.reduce((a,i)=>a+net(i),0);
+ const st=(l,v,s,c)=>`<div class="card"><div class="text-xs text-gray-400">${l}</div><div class="text-xl font-extrabold font-mono ${c}">${v}</div><div class="text-xs text-gray-500">${s}</div></div>`;
+ $('stats').innerHTML=st('Items in stock',rows.length,'matching current filters','text-white')
+  +st('Total spent',yen(spent),'~$'+Math.round(spent/S.rate),'text-white')
+  +st('Projected eBay sales',yen(gross),'before '+S.fee+'% fee','text-cyan-300')
+  +st('Net profit',yen(nr-spent),'after fee','text-emerald-300');
+ $('invBody').innerHTML=rows.length?rows.map(i=>{const p=net(i)-i.paidJPY;return `<tr>
+  <td><div class="text-white font-semibold">${esc(i.title)}</div><div class="text-xs text-cyan-300 font-mono">${esc(i.code)}</div></td>
+  <td>${esc(i.console)}</td><td>${esc(i.location||'-')}</td>
+  <td><span class="text-xs mr-1">${esc(i.format)}</span><span class="rk rk-${esc(i.rank)}">${esc(i.rank)}</span></td>
+  <td class="font-mono">${yen(i.paidJPY)}</td><td class="font-mono">$${i.compUSD}</td>
+  <td class="font-mono ${p>=0?'text-emerald-300':'text-red-400'}">${yen(p)}</td>
+  <td><button class="text-xs text-red-400" data-a="del" data-i="${esc(i.id)}">Delete</button></td></tr>`}).join('')
+ :'<tr><td colspan="8" class="text-center text-gray-500 text-xs">Nothing in stock for these filters.</td></tr>';
+}
+
+// ---- Form ----
+function openForm(mode,item){
+ formMode=mode;
+ $('formTitle').textContent=mode==='comp'?'Add to comps database':'Add to my inventory';
+ $('f_priceLbl').textContent=mode==='comp'?'Shop price (JPY)':'Price paid (JPY)';
+ $('locBox').classList.toggle('hidden',mode==='comp');
+ $('f_title').value=item?.title||'';$('f_code').value=item?.code||'';
+ $('f_con').value=item?.console||CON[0];
+ $('f_price').value=item?.storePriceJPY??1000;$('f_comp').value=item?.compUSD??30;
+ $('f_fmt').value=item?.format||'CIB';$('f_rank').value=item?.rank||'B';$('f_loc').value=S.loc||'';
+ margin();$('formM').classList.remove('hidden');$('f_title').focus();
+}
+function margin(){
+ const p=net({compUSD:+$('f_comp').value||0})-(+$('f_price').value||0);
+ $('f_margin').innerHTML='Estimated profit after fee: <b class="'+(p>=0?'text-emerald-300':'text-red-400')+'">'+yen(p)+'</b>';
+}
+function saveForm(){
+ const o={title:$('f_title').value.trim(),code:$('f_code').value.trim().toUpperCase(),console:$('f_con').value,
+  format:$('f_fmt').value,rank:$('f_rank').value,compUSD:+$('f_comp').value||0};
+ if(!o.title)return toast('Enter a title',false);
+ const price=+$('f_price').value||0;
+ if(formMode==='comp'){
+  if(!o.code)return toast('Enter a catalog code',false);
+  o.storePriceJPY=price;
+  const k=S.comps.findIndex(c=>c.code===o.code&&c.console===o.console);
+  k>-1?S.comps[k]=o:S.comps.unshift(o);
+  post('addComp',o);search1();
+ }else{
+  o.id='INV-'+Date.now();o.paidJPY=price;o.location=$('f_loc').value.trim()||'Unknown';o.date=new Date().toISOString().slice(0,10);
+  S.loc=$('f_loc').value.trim();S.inv.unshift(o);post('addInv',{items:[o]});renderInv();
+ }
+ save();$('formM').classList.add('hidden');toast('Saved '+o.title);
+}
+
+// ---- Actions ----
+function showTab(t){
+ ['t1','t2','t3'].forEach(id=>$(id).classList.toggle('hidden',id!==t));
+ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.i===t));
+ if(t==='t3')renderInv();
+}
+function addCart(i){const c=S.comps[i];cart.push({...c,offer:defOffer(c)});renderCart();toast('Added '+c.title+' to offer list')}
+const A={
+ tab:showTab,
+ con:c=>{con=c;pills();search1()},
+ add:m=>openForm(m),
+ toInv:i=>{const c=S.comps[i];openForm('inv',c)},
+ toCart:i=>{addCart(+i)},
+ rm:i=>{cart.splice(i,1);renderCart()},
+ clear:()=>{cart=[];renderCart()},
+ print:()=>cart.length?window.print():toast('Nothing to print',false),
+ accept:()=>{
+  if(!cart.length)return toast('Offer list is empty',false);
+  const d=new Date().toISOString().slice(0,10);
+  const items=cart.map((c,k)=>({id:'INV-'+Date.now()+'-'+k,code:c.code,title:c.title,console:c.console,paidJPY:c.offer,format:c.format,rank:c.rank,compUSD:c.compUSD,location:'Customer trade-in',date:d}));
+  S.inv.unshift(...items);post('addInv',{items});save();
+  toast('Added '+items.length+' items to inventory');cart=[];renderCart();showTab('t3');
+ },
+ del:id=>{if(!confirm('Delete this item from inventory?'))return;S.inv=S.inv.filter(i=>i.id!==id);post('delInv',{id});save();renderInv()},
+ csv:()=>{
+  const h=['id','code','title','console','format','rank','paidJPY','compUSD','location','date'];
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const t=[h.join(','),...S.inv.map(i=>h.map(k=>q(i[k])).join(','))].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/csv'}));a.download='rocket-hub-inventory.csv';a.click();
+ },
+ settings:()=>{$('s_url').value=S.url;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('setM').classList.toggle('hidden')},
+ saveSet:()=>{
+  S.url=$('s_url').value.trim();S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||13;S.offer=+$('s_off').value||70;
+  save();$('setM').classList.add('hidden');labels();renderAll();sync();toast('Settings saved');
+ },
+ closeForm:()=>$('formM').classList.add('hidden'),
+ saveForm
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)A[b.dataset.a](b.dataset.i)});
+document.addEventListener('change',e=>{
+ const o=e.target.dataset.offer;if(o!==undefined){cart[o].offer=Math.max(0,+e.target.value||0);renderCart()}
+});
+['f_price','f_comp'].forEach(id=>$(id).addEventListener('input',margin));
+$('q1').addEventListener('input',search1);$('q2').addEventListener('input',search2);
+$('fCon').addEventListener('change',renderInv);$('fRank').addEventListener('change',renderInv);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
+
+function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1';$('offLbl').textContent='('+S.offer+'% of net after '+S.fee+'% fee)'}
+function renderAll(){pills();search1();search2();renderCart();renderInv()}
+
+CON.forEach(c=>{['f_con','fCon'].forEach(id=>{const o=document.createElement('option');o.value=o.textContent=c;$(id).appendChild(o)})});
+labels();renderAll();sync();
+</script>
+</body>
+</html>
