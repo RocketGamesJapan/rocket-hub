@@ -235,6 +235,8 @@ const ebay=c=>'https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent([c.titl
 const ageTxt=c=>{if(!c.compUSD)return '';if(!c.compDate)return ' | <span class="text-amber-300">comp date unknown</span>';
  const d=Math.floor((Date.now()-new Date(c.compDate))/864e5);if(isNaN(d))return '';
  return d>90?' | <span class="text-amber-300">comp '+d+' days old</span>':' | comp '+d+'d old'};
+const watchOf=c=>S.watch.find(w=>w.k===wk(c));
+const watchLine=(c,price)=>{const w=isW(c)&&watchOf(c);return w&&w.max?`<div class="text-xs mt-1 ${price<=w.max?'text-emerald-300':'text-red-300'}">★ Watchlist max ${yen(w.max)}: ${price<=w.max?'under':'OVER'}</div>`:''};
 const wk=c=>c.console+'|'+c.format+'|'+(c.code||c.title);
 const isW=c=>S.watch.some(w=>w.k===wk(c));
 const norm=s=>String(s||'').trim().toLowerCase();
@@ -243,6 +245,8 @@ const stMatch=(r,c)=>norm(r.type)===norm(c.console)&&r.format===c.format&&(r.jan
 const ownN=c=>[...S.inv.filter(i=>i.status!=='sold'&&i.console===c.console&&i.format===c.format&&(c.code?i.code===c.code:i.title===c.title)),
  ...S.stock.filter(r=>!stSold(r)&&stMatch(r,c)).map(r=>({rank:r.status||'in stock'}))];
 const ST_STATUS=['Need to test','Need photos','On eBay','Shipped','Need to buy box','Need to buy manual'];
+const paidMax=c=>Math.max(0,...S.inv.filter(i=>i.console===c.console&&i.format===c.format&&(c.code?i.code===c.code:i.title===c.title)).map(i=>+i.paidJPY||0),...S.stock.filter(r=>stMatch(r,c)).map(r=>r.purchase||0));
+function fillWatchMax(){let ch=false;S.watch.forEach(w=>{if(w.max!==undefined)return;const c=S.comps.find(x=>wk(x)===w.k),m=c?paidMax(c):0;if(m>0){w.max=m;ch=true}});if(ch)save()}
 let stFilter='All',stMsg='';
 const stCat=r=>ST_STATUS.find(x=>norm(x)===norm(r.status))||'Other';
 const stDays=r=>{const d=Math.floor((Date.now()-new Date(r.purchaseDate))/864e5);return isNaN(d)?'':d};
@@ -270,7 +274,7 @@ const bandBox=(c,price,i,typed)=>{
  if(!c.compUSD)return `<div id="band${i}" class="rounded-xl p-3 bg-white/5"><div class="text-2xl font-extrabold text-gray-300">NO COMP</div><div class="text-xs text-gray-400">Check eBay sold listings and add a comp</div></div>`;
  if(!(price>0))return `<div id="band${i}" class="rounded-xl p-3 bg-white/5"><div class="text-2xl font-extrabold text-gray-300">ENTER PRICE</div><div class="text-sm text-white">Pay up to ${yen(maxPay(c))} for your target profit</div></div>`;
  const p=net(c)-price,roi=p/price*100,buy=p>=S.minP&&(roi>=S.minPct||(S.bigP>0&&p>=S.bigP));
- return `<div id="band${i}" class="rounded-xl p-3 border ${buy?'bg-emerald-500/25 border-emerald-400':'bg-red-500/25 border-red-400'}"><div class="text-4xl font-extrabold ${buy?'text-emerald-300':'text-red-300'}">${buy?'BUY':'SKIP'}</div><div class="text-sm text-white">${p>0?'+':''}${yen(p)} profit (${Math.round(roi)}%) at ${yen(price)}${typed?'':' (lowest seen)'}${buy&&roi<S.minPct?' | big-profit rule':''}</div><div class="text-xs text-gray-300">Pay up to ${yen(maxPay(c))} for your target</div></div>`};
+ return `<div id="band${i}" class="rounded-xl p-3 border ${buy?'bg-emerald-500/25 border-emerald-400':'bg-red-500/25 border-red-400'}"><div class="text-4xl font-extrabold ${buy?'text-emerald-300':'text-red-300'}">${buy?'BUY':'SKIP'}</div><div class="text-sm text-white">${p>0?'+':''}${yen(p)} profit (${Math.round(roi)}%) at ${yen(price)}${typed?'':' (lowest seen)'}${buy&&roi<S.minPct?' | big-profit rule':''}</div><div class="text-xs text-gray-300">Pay up to ${yen(maxPay(c))} for your target</div>${watchLine(c,price)}</div>`};
 let here={name:'',t:0};
 function warmLoc(){locate().then(n=>{if(n)here={name:n,t:Date.now()}}).catch(()=>{})}
 
@@ -312,7 +316,7 @@ function sync(){
   if(d.stock){if(d.stock.rows){S.stock=d.stock.rows;stMsg=d.stock.missing&&d.stock.missing.length?'Columns not found in STOCK: '+d.stock.missing.join(', '):''}else stMsg=d.stock.error||''}
   const kept=!d.inv||(d.inv.length===0&&S.inv.length>0);
   if(!kept)S.inv=d.inv.map(c=>({...c,paidJPY:+c.paidJPY,compUSD:+c.compUSD}));
-  save();renderAll();setSync(kept&&S.inv.length?'Sheet has no inventory - kept phone copy':'Synced');
+  fillWatchMax();save();renderAll();setSync(kept&&S.inv.length?'Sheet has no inventory - kept phone copy':'Synced');
  }).catch(()=>setSync('Offline - using saved data'));
 }
 
@@ -329,7 +333,7 @@ function search1(){
  hits=all.slice(0,60);
  const w=hits.filter(i=>isW(S.comps[i]));
  $('watchBanner').classList.toggle('hidden',!w.length);
- $('watchBanner').textContent='★ ON YOUR WATCHLIST: '+w.map(i=>S.comps[i].title).join(', ');
+ $('watchBanner').textContent='★ ON YOUR WATCHLIST: '+w.map(i=>{const c=S.comps[i],x=watchOf(c);return c.title+(x&&x.max?' - BUY under '+yen(x.max):'')}).join(' | ');
  if(w.length&&window._sc&&navigator.vibrate)navigator.vibrate([200,100,200]);
  window._sc=0;
  const ow=hits.filter(i=>ownN(S.comps[i]).length);
@@ -342,7 +346,8 @@ function search1(){
    <div><div class="flex justify-between gap-2 text-xs"><span class="font-mono text-cyan-300">${esc(c.code)}</span>
     <span><span class="text-gray-400 mr-1">${esc(c.format)}</span><span class="rk rk-${esc(c.rank)}">${esc(c.rank)}</span></span></div>
     <div class="flex justify-between gap-2 mt-2"><div class="font-bold text-white text-lg leading-snug">${esc(c.title)}</div><button data-a="watch" data-i="${i}" class="text-2xl leading-none ${isW(c)?'text-yellow-300':'text-gray-600'}" aria-label="Watchlist">★</button></div>
-   ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
+   ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}
+   ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
    ${bandBox(c,lowP(c),i,false)}
    <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-emerald-400 text-black shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
    <div class="text-xs text-gray-500">comp $${c.compUSD}${ageTxt(c)}${c.location?' | '+esc(c.location):''}</div>
@@ -549,15 +554,15 @@ function rememberStore(name){
 A.gps=id=>autoLoc(id,true);
 A.multi=()=>openScan(v=>{
  const c=S.comps.find(x=>x.code===v);
- if(c){cart.push({...c,offer:defOffer(c)});renderCart();$('scanInfo').textContent=(ownN(c).length?'📦 YOU HAVE '+ownN(c).length+' ALREADY. ':'')+(isW(c)?'★ WATCHLIST: ':'')+'Added: '+c.title+' ('+cart.length+' on list)'}
+ if(c){cart.push({...c,offer:defOffer(c)});renderCart();$('scanInfo').textContent=(ownN(c).length?'📦 YOU HAVE '+ownN(c).length+' ALREADY. ':'')+(isW(c)?'★ WATCHLIST'+(watchOf(c).max?' (under '+yen(watchOf(c).max)+')':'')+': ':'')+'Added: '+c.title+' ('+cart.length+' on list)'}
  else $('scanInfo').textContent='Not in database: '+v+' (add it by hand afterwards)';
 },true);
 function renderWatch(){
  $('wCount').textContent='('+S.watch.length+')';
- $('wList').innerHTML=S.watch.length?S.watch.map((w,i)=>`<div class="flex justify-between items-center gap-3 text-sm"><button class="text-white text-left truncate" data-a="wfind" data-i="${i}">${esc(w.title)} <span class="text-gray-500">${esc(w.console)}</span></button><button class="text-red-400 text-xs" data-a="unwatch" data-i="${i}">Remove</button></div>`).join(''):'<div class="text-xs text-gray-500">Tap the ★ on any result to hunt for it.</div>';
+ $('wList').innerHTML=S.watch.length?S.watch.map((w,i)=>`<div class="flex justify-between items-center gap-3 text-sm"><button class="text-white text-left truncate" data-a="wfind" data-i="${i}">${esc(w.title)} <span class="text-gray-500">${esc(w.console)}</span></button><input type="number" inputmode="numeric" data-wmax="${i}" value="${w.max||''}" placeholder="max ¥" class="inp !w-24 !py-1.5 text-sm"><button class="text-red-400 text-xs" data-a="unwatch" data-i="${i}">Remove</button></div>`).join(''):'<div class="text-xs text-gray-500">Tap the ★ on any result to hunt for it.</div>';
 }
 A.watch=i=>{const c=S.comps[i],k=wk(c),x=S.watch.findIndex(w=>w.k===k);
- if(x>-1)S.watch.splice(x,1);else S.watch.push({k,title:c.title,console:c.console,code:c.code});
+ if(x>-1)S.watch.splice(x,1);else S.watch.push({k,title:c.title,console:c.console,format:c.format,code:c.code,max:paidMax(c)||undefined});
  save();renderWatch();search1()};
 A.unwatch=i=>{S.watch.splice(i,1);save();renderWatch();search1()};
 A.wfind=i=>{const w=S.watch[i];$('q1').value=w.code||w.title;con='All';pills();search1()};
@@ -576,6 +581,7 @@ document.addEventListener('input',e=>{const k=e.target.dataset.px;if(k===undefin
 A.fe=()=>{const t=$('f_title').value.trim();if(!t)return toast('Enter a title first',false);window.open(ebay({title:t,format:$('f_fmt').value}),'_blank')};
 A.fe2=()=>window.open(ebay(S.comps[lowIdx]),'_blank');
 A.stf=c=>{stFilter=c;renderStock()};
+document.addEventListener('change',e=>{const k=e.target.dataset.wmax;if(k===undefined)return;S.watch[k].max=Math.max(0,+e.target.value||0);save();search1()});
 let lastDel=null;
 A.del=id=>{
  lastDel=S.inv.find(i=>i.id===id);S.inv=S.inv.filter(i=>i.id!==id);post('delInv',{id});save();renderInv();
@@ -627,6 +633,7 @@ function renderAll(){pills();search1();search2();renderCart();renderInv();render
 
 CON.forEach(c=>{['f_con','fCon'].forEach(id=>{const o=document.createElement('option');o.value=o.textContent=c;$(id).appendChild(o)})});
 $('mSel').value=today().slice(0,7);
+fillWatchMax();
 labels();renderAll();sync();
 window.addEventListener('online',()=>{sync();updateRate()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateRate();warmLoc()}});
