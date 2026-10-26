@@ -13,7 +13,7 @@ body{font-family:Inter,sans-serif;background:#0b0c10;color:#e5e7eb}
 .inp{@apply w-full px-3 py-2 bg-[#0b0c10] border border-white/10 rounded-xl text-base text-white focus:outline-none focus:border-violet-500}
 .btn{@apply px-4 py-2.5 rounded-xl text-sm font-bold transition}
 .lbl{@apply block text-xs text-gray-400 mb-1}
-.tab{@apply flex-1 py-3.5 text-sm text-center font-bold text-gray-400 sm:flex-none sm:px-3 sm:py-2 sm:text-xs sm:rounded-lg}
+.tab{@apply flex-1 py-3.5 px-1 text-xs text-center font-bold text-gray-400 sm:flex-none sm:px-3 sm:py-2 sm:text-xs sm:rounded-lg}
 .tab.on{@apply bg-violet-600 text-white}
 .pill{@apply px-3 py-1 rounded-xl text-xs border border-white/10 text-gray-400 whitespace-nowrap}
 .pill.on{@apply bg-violet-600 text-white border-violet-600}
@@ -35,6 +35,7 @@ td{@apply py-2.5 px-3}
   <nav class="fixed bottom-0 inset-x-0 z-30 flex bg-[#12131C] border-t border-white/10 pb-[env(safe-area-inset-bottom)] sm:static sm:border-0 sm:p-1 sm:rounded-xl sm:gap-1 sm:pb-1">
    <button class="tab on" data-a="tab" data-i="t1">Stock lookup</button>
    <button class="tab" data-a="tab" data-i="t2">Buy offers <span id="badge" class="hidden ml-1 bg-pink-600 text-white rounded-full px-1.5">0</span></button>
+   <button class="tab" data-a="tab" data-i="t4">STOCK sheet</button>
    <button class="tab" data-a="tab" data-i="t3">Inventory</button>
   </nav>
   <div class="flex items-center gap-3 text-xs text-gray-400">
@@ -114,6 +115,15 @@ td{@apply py-2.5 px-3}
   </table></div>
  </div>
 </section>
+<section id="t4" class="space-y-4 hidden">
+ <div id="stStats" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+ <div class="card space-y-3">
+  <div class="flex gap-2"><input id="stQ" class="inp" placeholder="Search your STOCK sheet (name, JAN, SKU, console)"><select id="stSort" class="inp !w-auto"><option value="old">Oldest first</option><option value="new">Newest first</option></select></div>
+  <div id="stPills" class="flex gap-2 overflow-x-auto pb-1"></div>
+  <div id="stMsg" class="text-xs text-amber-300"></div>
+  <div id="stList" class="space-y-2"></div>
+ </div>
+</section>
 </main>
 
 <div id="scanM" class="fixed inset-0 z-50 hidden bg-black/90 p-4">
@@ -187,6 +197,7 @@ td{@apply py-2.5 px-3}
    <div><label class="lbl">and at least this % of price</label><input id="s_minpct" type="number" class="inp"></div>
   </div>
   <div><label class="lbl">or BUY anyway if profit is at least ¥ (0 = off)</label><input id="s_bigp" type="number" class="inp"></div>
+  <div><label class="lbl">STOCK sheet profit factor (0.8 = keep 80% of list price)</label><input id="s_sf" type="number" step="0.01" class="inp"></div>
   <div class="flex justify-end gap-2">
    <button class="btn bg-[#0b0c10]" data-a="settings">Cancel</button>
    <button class="btn bg-violet-600 text-white" data-a="saveSet">Save settings</button>
@@ -211,7 +222,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
 const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',15),offer:load('offer',70),
- url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[])};
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8)};
 const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
 let cart=[],hits=[],con='All',formMode='comp';
 
@@ -226,7 +237,34 @@ const ageTxt=c=>{if(!c.compUSD)return '';if(!c.compDate)return ' | <span class="
  return d>90?' | <span class="text-amber-300">comp '+d+' days old</span>':' | comp '+d+'d old'};
 const wk=c=>c.console+'|'+c.format+'|'+(c.code||c.title);
 const isW=c=>S.watch.some(w=>w.k===wk(c));
-const ownN=c=>S.inv.filter(i=>i.status!=='sold'&&i.console===c.console&&i.format===c.format&&(c.code?i.code===c.code:i.title===c.title));
+const norm=s=>String(s||'').trim().toLowerCase();
+const stSold=r=>/sold/i.test(r.status)||!!r.saleDate;
+const stMatch=(r,c)=>norm(r.type)===norm(c.console)&&r.format===c.format&&(r.jan&&c.code?r.jan===c.code:norm(r.name)===norm(c.title));
+const ownN=c=>[...S.inv.filter(i=>i.status!=='sold'&&i.console===c.console&&i.format===c.format&&(c.code?i.code===c.code:i.title===c.title)),
+ ...S.stock.filter(r=>!stSold(r)&&stMatch(r,c)).map(r=>({rank:r.status||'in stock'}))];
+const ST_STATUS=['Need to test','Need photos','On eBay','Shipped','Need to buy box','Need to buy manual'];
+let stFilter='All',stMsg='';
+const stCat=r=>ST_STATUS.find(x=>norm(x)===norm(r.status))||'Other';
+const stDays=r=>{const d=Math.floor((Date.now()-new Date(r.purchaseDate))/864e5);return isNaN(d)?'':d};
+const stProfit=r=>r.raw*S.stockF-r.purchase;
+function renderStock(){
+ const all=S.stock.filter(r=>!stSold(r)),q=$('stQ').value.trim().toLowerCase();
+ $('stPills').innerHTML=['All',...ST_STATUS,'Other'].map(c=>{const n=c==='All'?all.length:all.filter(r=>stCat(r)===c).length;
+  return n?`<button class="pill ${c===stFilter?'on':''}" data-a="stf" data-i="${esc(c)}">${esc(c)} ${n}</button>`:''}).join('');
+ const rows=all.filter(r=>(stFilter==='All'||stCat(r)===stFilter)&&(!q||(r.name+' '+r.jan+' '+r.sku+' '+r.type).toLowerCase().includes(q)));
+ rows.sort((a,b)=>String(a.purchaseDate).localeCompare(String(b.purchaseDate)));
+ if($('stSort').value==='new')rows.reverse();
+ const st=(l,v,sub,c)=>`<div class="card"><div class="text-xs text-gray-400">${l}</div><div class="text-xl font-extrabold font-mono ${c}">${v}</div><div class="text-xs text-gray-500">${sub}</div></div>`;
+ const priced=all.filter(r=>r.raw>0);
+ $('stStats').innerHTML=st('Items',all.length,'not yet sold','text-white')
+  +st('Money in stock',yen(all.reduce((t,r)=>t+r.purchase,0)),'purchase cost','text-white')
+  +st('List value',yen(priced.reduce((t,r)=>t+r.raw,0)),priced.length+' priced','text-cyan-300')
+  +st('Est. profit',yen(priced.reduce((t,r)=>t+stProfit(r),0)),'list price x '+S.stockF+' minus cost','text-emerald-300');
+ $('stMsg').textContent=stMsg||(S.stock.length?'':'No STOCK data yet. Check Code.gs is deployed and the tab name is right.');
+ $('stList').innerHTML=rows.length?rows.slice(0,200).map(r=>{const d=stDays(r),p=stProfit(r);
+  return `<div class="card !p-3"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${esc(r.name)}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>`}).join('')
+  :'<div class="text-center text-xs text-gray-500">Nothing matches.</div>';
+}
 const maxPay=c=>{const a=net(c)/(1+S.minPct/100),b=S.bigP>0?net(c)-S.bigP:-Infinity;return Math.max(0,Math.floor(Math.min(net(c)-S.minP,Math.max(a,b))))};
 const bandBox=(c,price,i,typed)=>{
  if(!c.compUSD)return `<div id="band${i}" class="rounded-xl p-3 bg-white/5"><div class="text-2xl font-extrabold text-gray-300">NO COMP</div><div class="text-xs text-gray-400">Check eBay sold listings and add a comp</div></div>`;
@@ -271,6 +309,7 @@ function sync(){
  fetch(S.url+'?pw='+encodeURIComponent(S.pw)).then(r=>r.json()).then(d=>{
   if(d.error){setSync(d.error==='auth'?'Wrong passcode':'Server error');return}
   if(d.comps&&d.comps.length)S.comps=d.comps.map(c=>({...c,storePriceJPY:+c.storePriceJPY,lowestJPY:+c.lowestJPY,compUSD:+c.compUSD}));
+  if(d.stock){if(d.stock.rows){S.stock=d.stock.rows;stMsg=d.stock.missing&&d.stock.missing.length?'Columns not found in STOCK: '+d.stock.missing.join(', '):''}else stMsg=d.stock.error||''}
   const kept=!d.inv||(d.inv.length===0&&S.inv.length>0);
   if(!kept)S.inv=d.inv.map(c=>({...c,paidJPY:+c.paidJPY,compUSD:+c.compUSD}));
   save();renderAll();setSync(kept&&S.inv.length?'Sheet has no inventory - kept phone copy':'Synced');
@@ -303,7 +342,7 @@ function search1(){
    <div><div class="flex justify-between gap-2 text-xs"><span class="font-mono text-cyan-300">${esc(c.code)}</span>
     <span><span class="text-gray-400 mr-1">${esc(c.format)}</span><span class="rk rk-${esc(c.rank)}">${esc(c.rank)}</span></span></div>
     <div class="flex justify-between gap-2 mt-2"><div class="font-bold text-white text-lg leading-snug">${esc(c.title)}</div><button data-a="watch" data-i="${i}" class="text-2xl leading-none ${isW(c)?'text-yellow-300':'text-gray-600'}" aria-label="Watchlist">★</button></div>
-   ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (ranks: ${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
+   ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
    ${bandBox(c,lowP(c),i,false)}
    <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-emerald-400 text-black shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
    <div class="text-xs text-gray-500">comp $${c.compUSD}${ageTxt(c)}${c.location?' | '+esc(c.location):''}</div>
@@ -417,9 +456,10 @@ function saveForm(){
 
 // ---- Actions ----
 function showTab(t){
- ['t1','t2','t3'].forEach(id=>$(id).classList.toggle('hidden',id!==t));
+ ['t1','t2','t3','t4'].forEach(id=>$(id).classList.toggle('hidden',id!==t));
  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.i===t));
  if(t==='t3')renderInv();
+ if(t==='t4')renderStock();
 }
 function addCart(i){const c=S.comps[i];cart.push({...c,offer:defOffer(c)});renderCart();toast('Added '+c.title+' to offer list')}
 const A={
@@ -445,9 +485,9 @@ const A={
   const t=[h.join(','),...S.inv.map(i=>h.map(k=>q(i[k])).join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/csv'}));a.download='rocket-hub-inventory.csv';a.click();
  },
- settings:()=>{$('s_url').value=S.url;$('s_pw').value=S.pw;$('s_auto').checked=S.autoRate;$('s_minp').value=S.minP;$('s_minpct').value=S.minPct;$('s_bigp').value=S.bigP;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('setM').classList.toggle('hidden')},
+ settings:()=>{$('s_url').value=S.url;$('s_pw').value=S.pw;$('s_auto').checked=S.autoRate;$('s_minp').value=S.minP;$('s_minpct').value=S.minPct;$('s_bigp').value=S.bigP;$('s_sf').value=S.stockF;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('setM').classList.toggle('hidden')},
  saveSet:()=>{
-  S.url=$('s_url').value.trim();S.pw=$('s_pw').value;S.autoRate=$('s_auto').checked;if(S.autoRate)S.rateDate='';S.minP=+$('s_minp').value||0;S.minPct=+$('s_minpct').value||0;S.bigP=+$('s_bigp').value||0;S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||15;S.offer=+$('s_off').value||70;
+  S.url=$('s_url').value.trim();S.pw=$('s_pw').value;S.autoRate=$('s_auto').checked;if(S.autoRate)S.rateDate='';S.minP=+$('s_minp').value||0;S.minPct=+$('s_minpct').value||0;S.bigP=+$('s_bigp').value||0;S.stockF=+$('s_sf').value||0.8;S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||15;S.offer=+$('s_off').value||70;
   save();$('setM').classList.add('hidden');labels();renderAll();sync();updateRate();toast('Settings saved');
  },
  closeForm:()=>$('formM').classList.add('hidden'),
@@ -535,6 +575,7 @@ document.addEventListener('input',e=>{const k=e.target.dataset.px;if(k===undefin
  const c=S.comps[k],v=+e.target.value;$('band'+k).outerHTML=bandBox(c,v>0?v:lowP(c),k,v>0)});
 A.fe=()=>{const t=$('f_title').value.trim();if(!t)return toast('Enter a title first',false);window.open(ebay({title:t,format:$('f_fmt').value}),'_blank')};
 A.fe2=()=>window.open(ebay(S.comps[lowIdx]),'_blank');
+A.stf=c=>{stFilter=c;renderStock()};
 let lastDel=null;
 A.del=id=>{
  lastDel=S.inv.find(i=>i.id===id);S.inv=S.inv.filter(i=>i.id!==id);post('delInv',{id});save();renderInv();
@@ -578,11 +619,11 @@ document.addEventListener('change',e=>{
 });
 ['f_price','f_comp'].forEach(id=>$(id).addEventListener('input',margin));
 $('q1').addEventListener('input',search1);$('q2').addEventListener('input',search2);
-$('fSt').addEventListener('change',renderInv);$('mSel').addEventListener('change',renderInv);$('fCon').addEventListener('change',renderInv);$('fRank').addEventListener('change',renderInv);
+$('fSt').addEventListener('change',renderInv);$('mSel').addEventListener('change',renderInv);$('stQ').addEventListener('input',renderStock);$('stSort').addEventListener('change',renderStock);$('fCon').addEventListener('change',renderInv);$('fRank').addEventListener('change',renderInv);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('lowM').classList.add('hidden');$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
 
 function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1'+(S.autoRate?' (auto)':'');$('offLbl').textContent='('+S.offer+'% of net after '+S.fee+'% fee)'}
-function renderAll(){pills();search1();search2();renderCart();renderInv();renderWatch()}
+function renderAll(){pills();search1();search2();renderCart();renderInv();renderWatch();renderStock()}
 
 CON.forEach(c=>{['f_con','fCon'].forEach(id=>{const o=document.createElement('option');o.value=o.textContent=c;$(id).appendChild(o)})});
 $('mSel').value=today().slice(0,7);
