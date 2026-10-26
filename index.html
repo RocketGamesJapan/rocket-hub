@@ -222,7 +222,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
 const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',15),offer:load('offer',70),
- url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8)};
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[])};
 const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
 let cart=[],hits=[],con='All',formMode='comp';
 
@@ -258,6 +258,25 @@ function toStock(items){
  rows.forEach(x=>S.stock.push({name:x.title,sku:'',format:x.format,type:x.type,purchase:x.paidJPY,raw:0,status:x.status,purchaseDate:x.date,saleDate:'',location:x.location,jan:x.code,rank:x.rank}));
  return 'added to STOCK sheet';
 }
+let salesMsg='';
+const saleStats=c=>{
+ const m=S.sales.filter(x=>x.format===c.format&&typeNorm(x.type)===norm(c.console)&&((x.jan&&c.code&&x.jan===c.code)||norm(x.name)===norm(c.title)));
+ if(!m.length)return null;
+ m.sort((a,b)=>String(b.saleDate).localeCompare(String(a.saleDate)));
+ const r=m.slice(0,5).map(x=>x.net).sort((a,b)=>a-b),h=r.length/2;
+ const med=r.length%2?r[(r.length-1)/2]:(r[h-1]+r[h])/2;
+ const d=m.map(x=>(new Date(x.saleDate)-new Date(x.purchaseDate))/864e5).filter(x=>isFinite(x)&&x>=0);
+ return {n:m.length,medNet:med,compUSD:Math.round(med/(1-S.fee/100)/S.rate*100)/100,last:m[0].saleDate,days:d.length?Math.round(d.reduce((a,b)=>a+b,0)/d.length):null};
+};
+const saleLine=(c,i)=>{const t=saleStats(c);if(!t)return '';
+ return `<div class="text-xs text-violet-300">📈 You've sold this ${t.n}x: median net ${yen(t.medNet)} (about $${t.compUSD} as a comp)${t.days!==null?', about '+t.days+' days from purchase to sale':''}, last sold ${esc(t.last)}. <button class="underline" data-a="useSale" data-i="${i}">Use as comp</button></div>`};
+function salesNote(){
+ if(salesMsg)return ' Sales: '+salesMsg;
+ if(!S.sales.length)return '';
+ const jan=new Set(S.comps.filter(c=>c.code).map(c=>c.code+'|'+c.format)),ttl=new Set(S.comps.map(c=>norm(c.title)+'|'+c.format+'|'+norm(c.console)));
+ const m=S.sales.filter(x=>(x.jan&&jan.has(x.jan+'|'+x.format))||ttl.has(norm(x.name)+'|'+x.format+'|'+typeNorm(x.type))).length;
+ return ' Sales history: '+S.sales.length+' sales, '+m+' matched to a comp.';
+}
 let buyNote='';
 function compFromBuy(i){
  const k=S.comps.findIndex(c=>c.console===i.console&&c.format===i.format&&((i.code&&c.code===i.code)||norm(c.title)===norm(i.title)));
@@ -290,7 +309,7 @@ function renderStock(){
   +st('Money in stock',yen(all.reduce((t,r)=>t+r.purchase,0)),'purchase cost','text-white')
   +st('List value',yen(priced.reduce((t,r)=>t+r.raw,0)),priced.length+' priced','text-cyan-300')
   +st('Est. profit',yen(priced.reduce((t,r)=>t+stProfit(r),0)),'list price x '+S.stockF+' minus cost','text-emerald-300');
- $('stMsg').textContent=stMsg||(S.stock.length?'':'No STOCK data yet. Check Code.gs is deployed and the tab name is right.');
+ $('stMsg').textContent=(stMsg||(S.stock.length?'':'No STOCK data yet. Check Code.gs is deployed and the tab name is right.'))+salesNote();
  $('stList').innerHTML=rows.length?rows.slice(0,200).map(r=>{const d=stDays(r),p=stProfit(r);
   return `<div class="card !p-3"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${esc(r.name)}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>`}).join('')
   :'<div class="text-center text-xs text-gray-500">Nothing matches.</div>';
@@ -341,6 +360,7 @@ function sync(){
   if(d.error){setSync(d.error==='auth'?'Wrong passcode':'Server error');return}
   if(d.comps&&d.comps.length)S.comps=d.comps.map(c=>({...c,storePriceJPY:+c.storePriceJPY,lowestJPY:+c.lowestJPY,compUSD:+c.compUSD}));
   if(d.stock){if(d.stock.rows){S.stock=d.stock.rows;stMsg=d.stock.missing&&d.stock.missing.length?'Columns not found in STOCK: '+d.stock.missing.join(', '):''}else stMsg=d.stock.error||''}
+  if(Array.isArray(d.sales)){S.sales=d.sales;salesMsg=''}else if(d.sales&&d.sales.error)salesMsg=d.sales.error;
   const kept=!d.inv||(d.inv.length===0&&S.inv.length>0);
   if(!kept)S.inv=d.inv.map(c=>({...c,paidJPY:+c.paidJPY,compUSD:+c.compUSD}));
   fillWatchMax();save();renderAll();setSync(kept&&S.inv.length?'Sheet has no inventory - kept phone copy':'Synced');
@@ -377,6 +397,7 @@ function search1(){
    ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
    ${bandBox(c,lowP(c),i,false)}
    <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-emerald-400 text-black shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
+   ${saleLine(c,i)}
    <div class="text-xs text-gray-500">comp $${c.compUSD}${ageTxt(c)}${c.location?' | '+esc(c.location):''}</div>
    <div class="grid grid-cols-2 gap-2">
     <button class="btn bg-emerald-400 text-black" data-a="toInv" data-i="${i}">Add to inventory</button>
@@ -610,6 +631,11 @@ A.fe=()=>{const t=$('f_title').value.trim();if(!t)return toast('Enter a title fi
 A.fe2=()=>window.open(ebay(S.comps[lowIdx]),'_blank');
 A.stf=c=>{stFilter=c;renderStock()};
 document.addEventListener('change',e=>{const k=e.target.dataset.wmax;if(k===undefined)return;S.watch[k].max=Math.max(0,+e.target.value||0);save();search1()});
+A.useSale=i=>{const c=S.comps[i],t=saleStats(c);if(!t)return;
+ if(c.compUSD&&!confirm('Replace the current comp $'+c.compUSD+' with $'+t.compUSD+'?'))return;
+ c.compUSD=t.compUSD;c.compDate=today();
+ post('updateLow',{code:c.code,title:c.title,console:c.console,format:c.format,lowestJPY:c.lowestJPY||0,location:c.location||'',compUSD:c.compUSD,compDate:c.compDate});
+ save();search1();toast('Comp set to $'+c.compUSD)};
 let lastDel=null;
 A.del=id=>{
  lastDel=S.inv.find(i=>i.id===id);S.inv=S.inv.filter(i=>i.id!==id);post('delInv',{id});save();renderInv();
