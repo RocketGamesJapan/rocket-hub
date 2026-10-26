@@ -13,7 +13,7 @@ body{font-family:Inter,sans-serif;background:#0b0c10;color:#e5e7eb}
 .inp{@apply w-full px-3 py-2 bg-[#0b0c10] border border-white/10 rounded-xl text-base text-white focus:outline-none focus:border-violet-500}
 .btn{@apply px-4 py-2.5 rounded-xl text-sm font-bold transition}
 .lbl{@apply block text-xs text-gray-400 mb-1}
-.tab{@apply flex-1 py-3.5 px-1 text-xs text-center font-bold text-gray-400 sm:flex-none sm:px-3 sm:py-2 sm:text-xs sm:rounded-lg}
+.tab{@apply flex-1 py-2.5 px-1 text-xs text-center font-bold text-gray-400 rounded-lg sm:flex-none sm:px-3}
 .tab.on{@apply bg-violet-600 text-white}
 .pill{@apply px-3 py-1 rounded-xl text-xs border border-white/10 text-gray-400 whitespace-nowrap}
 .pill.on{@apply bg-violet-600 text-white border-violet-600}
@@ -28,17 +28,17 @@ td{@apply py-2.5 px-3}
 @media print{header,.noprint,.np{display:none!important}body{background:#fff}*{color:#000!important}.card{border:0;background:#fff}.inp{background:#fff!important;border:0!important}}
 </style>
 </head>
-<body class="min-h-screen pb-28 sm:pb-16">
+<body class="min-h-screen pb-16">
 <header class="sticky top-0 z-30 bg-[#0b0c10]/95 border-b border-white/10 px-4 py-3">
  <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
-  <div class="font-extrabold text-white">🚀 Rocket Hub <span class="text-gray-500 font-normal text-sm">Scout & Inventory</span></div>
-  <nav class="fixed bottom-0 inset-x-0 z-30 flex bg-[#12131C] border-t border-white/10 pb-[env(safe-area-inset-bottom)] sm:static sm:border-0 sm:p-1 sm:rounded-xl sm:gap-1 sm:pb-1">
+  <div class="order-1 font-extrabold text-white">🚀 Rocket Hub <span class="text-gray-500 font-normal text-sm">Scout & Inventory</span></div>
+  <nav class="order-3 w-full sm:w-auto sm:order-2 flex bg-[#12131C] p-1 rounded-xl gap-1">
    <button class="tab on" data-a="tab" data-i="t1">Stock lookup</button>
    <button class="tab" data-a="tab" data-i="t2">Buy offers <span id="badge" class="hidden ml-1 bg-pink-600 text-white rounded-full px-1.5">0</span></button>
    <button class="tab" data-a="tab" data-i="t4">STOCK sheet</button>
    <button class="tab" data-a="tab" data-i="t3">Inventory</button>
   </nav>
-  <div class="flex items-center gap-3 text-xs text-gray-400">
+  <div class="order-2 sm:order-3 flex items-center gap-3 text-xs text-gray-400">
    <span id="sync">Local only</span><span id="rateLbl"></span>
    <button class="btn bg-[#12131C] border border-white/10" data-a="settings">Settings</button>
   </div>
@@ -150,7 +150,7 @@ td{@apply py-2.5 px-3}
  </div>
 </div>
 
-<div id="toast" class="fixed bottom-24 sm:bottom-5 right-4 z-50 hidden px-4 py-3 rounded-xl bg-[#12131C] border border-violet-500 text-sm"></div>
+<div id="toast" class="fixed bottom-5 right-4 z-50 hidden px-4 py-3 rounded-xl bg-[#12131C] border border-violet-500 text-sm"></div>
 
 <!-- Item form (used for both comps and inventory) -->
 <div id="formM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto">
