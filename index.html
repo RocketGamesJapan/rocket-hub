@@ -206,7 +206,7 @@ td{@apply py-2.5 px-3}
 </div>
 
 <script>
-const CON=["3DS","Dreamcast","DS","Famicom","GBA","Game Boy","Game Boy Color","Gamecube","MegaDrive","N64","PS1","PS2","PSP","Saturn","SFC","Vita","Wii"];
+const CON=["3DS","Dreamcast","DS","Famicom","GBA","Game Boy","Game Boy Color","Gamecube","Guide Book","MegaDrive","N64","PS1","PS2","PSP","Saturn","SFC","Toys/Other","Vita","Wii"];
 const SEED=[
  {code:"HDR-0159",title:"Crazy Taxi 2",console:"Dreamcast",storePriceJPY:1500,format:"CIB",rank:"A",compUSD:35},
  {code:"T-1201M",title:"Sonic the Hedgehog",console:"MegaDrive",storePriceJPY:1800,format:"CIB",rank:"A",compUSD:42},
@@ -241,12 +241,38 @@ const wk=c=>c.console+'|'+c.format+'|'+(c.code||c.title);
 const isW=c=>S.watch.some(w=>w.k===wk(c));
 const norm=s=>String(s||'').trim().toLowerCase();
 const stSold=r=>/sold/i.test(r.status)||!!r.saleDate;
-const stMatch=(r,c)=>norm(r.type)===norm(c.console)&&r.format===c.format&&(r.jan&&c.code?r.jan===c.code:norm(r.name)===norm(c.title));
-const ownN=c=>[...S.inv.filter(i=>i.status!=='sold'&&i.console===c.console&&i.format===c.format&&(c.code?i.code===c.code:i.title===c.title)),
- ...S.stock.filter(r=>!stSold(r)&&stMatch(r,c)).map(r=>({rank:r.status||'in stock'}))];
+const typeNorm=t=>({'super famicom':'sfc','gb':'game boy','gbc':'game boy color'}[norm(t)]||norm(t));
+const stMatch=(r,c)=>typeNorm(r.type)===norm(c.console)&&r.format===c.format&&(r.jan&&c.code?r.jan===c.code:norm(r.name)===norm(c.title));
+const ownN=c=>[...(S.stock.length?[]:S.inv).filter(i=>i.status!=='sold'&&i.console===c.console&&i.format===c.format&&(c.code?i.code===c.code:i.title===c.title)),
+ ...S.stock.filter(r=>!stSold(r)&&stMatch(r,c)).map(r=>({rank:(r.rank?r.rank+' ':'')+(r.status||'in stock')}))];
 const ST_STATUS=['Need to test','Need photos','On eBay','Shipped','Need to buy box','Need to buy manual'];
 const paidMax=c=>Math.max(0,...S.inv.filter(i=>i.console===c.console&&i.format===c.format&&(c.code?i.code===c.code:i.title===c.title)).map(i=>+i.paidJPY||0),...S.stock.filter(r=>stMatch(r,c)).map(r=>r.purchase||0));
 function fillWatchMax(){let ch=false;S.watch.forEach(w=>{if(w.max!==undefined)return;const c=S.comps.find(x=>wk(x)===w.k),m=c?paidMax(c):0;if(m>0){w.max=m;ch=true}});if(ch)save()}
+const TYPE_MAP={'SFC':'Super Famicom','Game Boy':'GB','Game Boy Color':'GBC','Dreamcast':'DreamCast'};
+const PHOTO_TYPES=['Figure','Manga','Pokemon Cards','Yugioh','Guide Book','TCG','Toys/Other'];
+const stockType=c=>TYPE_MAP[c]||c;
+function toStock(items){
+ if(!S.url)return '';
+ const rows=items.map(i=>{const t=stockType(i.console);return {title:i.title,code:i.code||'',console:i.console,type:t,format:i.format,rank:i.rank,paidJPY:i.paidJPY,location:i.location,date:i.date||today(),status:PHOTO_TYPES.includes(t)?'Need photos':'Need to test'}});
+ post('addStock',{items:rows});
+ rows.forEach(x=>S.stock.push({name:x.title,sku:'',format:x.format,type:x.type,purchase:x.paidJPY,raw:0,status:x.status,purchaseDate:x.date,saleDate:'',location:x.location,jan:x.code,rank:x.rank}));
+ return 'added to STOCK sheet';
+}
+let buyNote='';
+function compFromBuy(i){
+ const k=S.comps.findIndex(c=>c.console===i.console&&c.format===i.format&&((i.code&&c.code===i.code)||norm(c.title)===norm(i.title)));
+ if(k<0){
+  const cc={code:i.code||'',title:i.title,console:i.console,format:i.format,rank:i.rank,compUSD:+i.compUSD||0,storePriceJPY:i.paidJPY,lowestJPY:i.paidJPY,location:i.location,compDate:+i.compUSD?today():''};
+  S.comps.unshift(cc);post('addComp',cc);return 'added to comps database';
+ }
+ const c=S.comps[k];
+ if(i.paidJPY>0&&(!c.lowestJPY||i.paidJPY<c.lowestJPY)){
+  c.lowestJPY=i.paidJPY;c.location=i.location;
+  post('updateLow',{code:c.code,title:c.title,console:c.console,format:c.format,lowestJPY:i.paidJPY,location:i.location});
+  return 'new lowest price saved';
+ }
+ return '';
+}
 let stFilter='All',stMsg='';
 const stCat=r=>ST_STATUS.find(x=>norm(x)===norm(r.status))||'Other';
 const stDays=r=>{const d=Math.floor((Date.now()-new Date(r.purchaseDate))/864e5);return isNaN(d)?'':d};
@@ -290,21 +316,22 @@ function updateRate(){
   S.rate=Math.round(j*100)/100;S.rateDate=today();save();labels();renderAll();toast('Exchange rate updated: ¥'+S.rate+' / $1');
  }).catch(()=>{});
 }
-let flushing=false;
+let flushing=false,lastWarn='';
 async function flush(){
  if(!S.url||flushing||!S.queue.length||!navigator.onLine)return;
- flushing=true;
+ flushing=true;lastWarn='';
  try{
   while(S.queue.length){
    const body=JSON.stringify(S.queue[0]);let r;
    try{r=await(await fetch(S.url,{method:'POST',body})).json()}
    catch{await fetch(S.url,{method:'POST',mode:'no-cors',body});r={ok:true}}
+   if(r.warn){lastWarn=r.warn;toast('Sheet warning: '+r.warn,false)}
    if(!r.ok){setSync(r.error==='auth'?'Wrong passcode':'Server error');flushing=false;return}
    S.queue.shift();save();
   }
  }catch{}
  flushing=false;
- setSync(S.queue.length?S.queue.length+' waiting to sync':'Synced');
+ setSync(S.queue.length?S.queue.length+' waiting to sync':(lastWarn?'Synced, warning: '+lastWarn:'Synced'));
 }
 function sync(){
  if(!S.url)return setSync('Local only');
@@ -434,7 +461,7 @@ function margin(){
  const p=net({compUSD:+$('f_comp').value||0})-(+$('f_price').value||0);
  $('f_margin').innerHTML='Estimated profit after fee: <b class="'+(p>=0?'text-emerald-300':'text-red-400')+'">'+yen(p)+'</b>';
 }
-function saveForm(){
+function saveForm(){buyNote='';
  const o={title:$('f_title').value.trim(),code:$('f_code').value.trim().toUpperCase(),console:$('f_con').value,
   format:$('f_fmt').value,rank:$('f_rank').value,compUSD:+$('f_comp').value||0};
  if(!o.title)return toast('Enter a title',false);
@@ -455,8 +482,9 @@ function saveForm(){
  }else{
   o.id='INV-'+Date.now();o.paidJPY=price;o.location=$('f_loc').value.trim()||'Unknown';o.date=today();
   S.loc=$('f_loc').value.trim();S.inv.unshift(o);post('addInv',{items:[o]});renderInv();
+  buyNote=[compFromBuy(o),toStock([o])].filter(Boolean).join(', ');search1();
  }
- rememberStore(loc);save();$('formM').classList.add('hidden');toast('Saved '+o.title);
+ rememberStore(loc);save();$('formM').classList.add('hidden');toast('Saved '+o.title+(buyNote?' ('+buyNote+')':''));
 }
 
 // ---- Actions ----
@@ -480,7 +508,7 @@ const A={
   if(!cart.length)return toast('Offer list is empty',false);
   const d=today();
   const items=cart.map((c,k)=>({id:'INV-'+Date.now()+'-'+k,code:c.code,title:c.title,console:c.console,paidJPY:c.offer,format:c.format,rank:c.rank,compUSD:c.compUSD,location:'Customer trade-in',date:d}));
-  S.inv.unshift(...items);post('addInv',{items});save();
+  S.inv.unshift(...items);post('addInv',{items});toStock(items);save();
   toast('Added '+items.length+' items to inventory');cart=[];renderCart();showTab('t3');
  },
  del:id=>{if(!confirm('Delete this item from inventory?'))return;S.inv=S.inv.filter(i=>i.id!==id);post('delInv',{id});save();renderInv()},
@@ -572,9 +600,9 @@ A.quick=i=>{
  const name=(Date.now()-here.t<6e5&&here.name)||S.loc||'Unknown';
  const it={id:'INV-'+Date.now(),code:c.code,title:c.title,console:c.console,paidJPY:v,format:c.format||'CIB',rank:$('rk'+i).value,compUSD:c.compUSD,location:name,date:today(),status:'',soldUSD:'',soldDate:''};
  S.inv.unshift(it);if(here.name&&name===here.name){S.loc=name;rememberStore(name)}
- post('addInv',{items:[it]});save();renderInv();
+ post('addInv',{items:[it]});const note=[compFromBuy(it),toStock([it])].filter(Boolean).join(', ');save();renderInv();
  search1();
- toast('Added '+c.title+' for '+yen(v)+' at '+name);
+ toast('Added '+c.title+' for '+yen(v)+' at '+name+(note?' ('+note+')':''));
 };
 document.addEventListener('input',e=>{const k=e.target.dataset.px;if(k===undefined)return;
  const c=S.comps[k],v=+e.target.value;$('band'+k).outerHTML=bandBox(c,v>0?v:lowP(c),k,v>0)});
