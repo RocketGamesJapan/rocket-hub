@@ -10,17 +10,17 @@
 <style type="text/tailwindcss">
 body{font-family:Inter,sans-serif;background:#0b0c10;color:#e5e7eb}
 .card{@apply bg-[#12131C] border border-white/10 rounded-2xl p-4}
-.inp{@apply w-full px-3 py-2 bg-[#0b0c10] border border-white/10 rounded-xl text-base text-white focus:outline-none focus:border-violet-500}
+.inp{@apply w-full px-3 py-2 bg-[#0b0c10] border border-white/10 rounded-xl text-base text-white focus:outline-none focus:border-sky-500}
 .btn{@apply px-4 py-2.5 rounded-xl text-sm font-bold transition}
 .lbl{@apply block text-xs text-gray-400 mb-1}
 .tab{@apply flex-1 py-2.5 px-1 text-xs text-center font-bold text-gray-400 rounded-lg sm:flex-none sm:px-3}
-.tab.on{@apply bg-violet-600 text-white}
+.tab.on{@apply bg-sky-600 text-white}
 .pill{@apply px-3 py-1 rounded-xl text-xs border border-white/10 text-gray-400 whitespace-nowrap}
-.pill.on{@apply bg-violet-600 text-white border-violet-600}
+.pill.on{@apply bg-sky-600 text-white border-sky-600}
 .rk{@apply text-xs font-bold px-2 py-0.5 rounded-full border}
 .rk-S{@apply text-yellow-300 border-yellow-300/40 bg-yellow-300/10}
 .rk-A{@apply text-emerald-300 border-emerald-300/40 bg-emerald-300/10}
-.rk-B{@apply text-cyan-300 border-cyan-300/40 bg-cyan-300/10}
+.rk-B{@apply text-sky-300 border-cyan-300/40 bg-cyan-300/10}
 .rk-C{@apply text-orange-300 border-orange-300/40 bg-orange-300/10}
 .rk-D{@apply text-red-400 border-red-400/40 bg-red-400/10}
 th{@apply py-2 px-3 text-xs font-semibold text-gray-400 text-left}
@@ -28,18 +28,17 @@ td{@apply py-2.5 px-3}
 @media print{header,.noprint,.np{display:none!important}body{background:#fff}*{color:#000!important}.card{border:0;background:#fff}.inp{background:#fff!important;border:0!important}}
 </style>
 </head>
-<body class="min-h-screen pb-16">
+<body class="min-h-screen pb-28">
 <header class="sticky top-0 z-30 bg-[#0b0c10]/95 border-b border-white/10 px-4 py-3">
  <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
   <div class="order-1 font-extrabold text-white">🚀 Rocket Hub <span class="text-gray-500 font-normal text-sm">Scout & Inventory</span></div>
   <nav class="order-3 w-full sm:w-auto sm:order-2 flex bg-[#12131C] p-1 rounded-xl gap-1">
    <button class="tab on" data-a="tab" data-i="t1">Stock lookup</button>
-   <button class="tab" data-a="tab" data-i="t2">Buy offers <span id="badge" class="hidden ml-1 bg-pink-600 text-white rounded-full px-1.5">0</span></button>
+   <button class="tab" data-a="tab" data-i="t2">Buy offers <span id="badge" class="hidden ml-1 bg-sky-600 text-white rounded-full px-1.5">0</span></button>
    <button class="tab" data-a="tab" data-i="t4">STOCK sheet</button>
-   <button class="tab" data-a="tab" data-i="t3">Inventory</button>
   </nav>
   <div class="order-2 sm:order-3 flex items-center gap-3 text-xs text-gray-400">
-   <span id="sync">Local only</span><span id="rateLbl"></span>
+   <button id="sync" data-a="refresh" class="underline decoration-dotted">Local only</button><span id="syncAgo"></span><span id="rateLbl"></span>
    <button class="btn bg-[#12131C] border border-white/10" data-a="settings">Settings</button>
   </div>
  </div>
@@ -48,14 +47,20 @@ td{@apply py-2.5 px-3}
 <main class="max-w-6xl mx-auto px-4 pt-5 space-y-5">
 
 <section id="t1" class="space-y-4">
- <button class="w-full py-6 rounded-2xl bg-cyan-400 text-black text-xl font-extrabold" data-a="scan" data-i="q1">📷 Scan barcode</button>
+ <button class="w-full py-6 rounded-2xl bg-sky-500 text-white text-xl font-extrabold" data-a="scan" data-i="q1">📷 Scan barcode</button>
  <div class="card space-y-3">
   <div class="flex gap-2">
    <input id="q1" class="inp" placeholder="Title, catalog code or JAN barcode" autocomplete="off">
-   <button class="btn bg-violet-600 text-white shrink-0" data-a="add" data-i="comp">New comp</button>
+   <button class="btn bg-sky-600 text-white shrink-0" data-a="add" data-i="comp">New comp</button>
   </div>
   <div id="pills" class="flex gap-2 overflow-x-auto pb-1"></div>
   <details><summary class="text-sm text-yellow-300 cursor-pointer">★ Watchlist <span id="wCount"></span></summary><div id="wList" class="mt-2 space-y-2"></div></details>
+ </div>
+ <div id="basketBox" class="card hidden space-y-2">
+  <div class="flex justify-between items-center"><div class="font-bold text-white">🛒 Basket <span id="bCount" class="text-gray-400"></span></div><button class="text-xs text-red-400" data-a="bClear">Empty basket</button></div>
+  <div id="bList" class="space-y-2"></div>
+  <div id="bTotals" class="text-sm"></div>
+  <button class="btn w-full bg-sky-500 text-white" data-a="buyAll">✓ I bought these - add them all</button>
  </div>
  <div id="ownBanner" class="hidden rounded-2xl bg-sky-400 text-black font-extrabold text-center py-3 px-3"></div>
  <div id="watchBanner" class="hidden rounded-2xl bg-yellow-300 text-black font-extrabold text-center py-4 px-3 text-lg animate-pulse"></div>
@@ -65,10 +70,10 @@ td{@apply py-2.5 px-3}
 
 <section id="t2" class="space-y-4 hidden">
  <div class="card space-y-3 noprint">
-  <div class="text-sm font-bold text-white">Customer buy offer <span id="offLbl" class="text-cyan-300"></span></div>
-  <div class="flex gap-2"><input id="q2" class="inp" placeholder="Search what the customer wants to sell" autocomplete="off"><button class="btn bg-cyan-400 text-black shrink-0" data-a="scan" data-i="q2" aria-label="Scan barcode">📷 Scan</button><button class="btn bg-cyan-400 text-black shrink-0" data-a="multi">📷 Pile</button></div>
+  <div class="text-sm font-bold text-white">Customer buy offer <span id="offLbl" class="text-sky-300"></span></div>
+  <div class="flex gap-2"><input id="q2" class="inp" placeholder="Search what the customer wants to sell" autocomplete="off"><button class="btn bg-sky-500 text-white shrink-0" data-a="scan" data-i="q2" aria-label="Scan barcode">📷 Scan</button><button class="btn bg-sky-500 text-white shrink-0" data-a="multi">📷 Pile</button></div>
   <div id="res2" class="space-y-2"></div>
-  <button class="btn w-full bg-[#0b0c10] border border-cyan-400/40 text-cyan-300" data-a="addManual">＋ Item not in database</button>
+  <button class="btn w-full bg-[#0b0c10] border border-sky-400/40 text-sky-300" data-a="addManual">＋ Item not in database</button>
  </div>
  <div class="card space-y-3">
   <div class="hidden print:block mb-2"><div class="text-xl font-bold">お買取査定書 / Purchase Offer</div><div class="text-sm">Rocket Hub　<span id="pDate"></span></div></div>
@@ -76,16 +81,13 @@ td{@apply py-2.5 px-3}
    <div class="font-bold text-white">Offer list</div>
    <button class="btn text-red-400 noprint" data-a="clear">Clear</button>
   </div>
-  <div class="overflow-x-auto"><table class="w-full text-sm">
-   <thead><tr><th>Item<span class="hidden print:inline"> 商品名</span></th><th class="np">eBay comp</th><th class="np">Net after fee</th><th>Offer (¥)<span class="hidden print:inline"> 買取額</span></th><th class="np">Profit</th><th class="noprint"></th></tr></thead>
-   <tbody id="cart" class="divide-y divide-white/10"></tbody>
-  </table></div>
+  <div id="cart" class="space-y-2"></div>
   <div class="flex flex-wrap justify-between items-center gap-3 border-t border-white/10 pt-3">
-   <div class="text-sm"><span class="text-gray-400">Total offer<span class="hidden print:inline"> 合計買取額</span></span> <b id="tPay" class="text-cyan-300 text-xl ml-1">¥0</b>
+   <div class="text-sm"><span class="text-gray-400">Total offer<span class="hidden print:inline"> 合計買取額</span></span> <b id="tPay" class="text-sky-300 text-xl ml-1">¥0</b>
     <span class="np ml-4 text-gray-400">Est. profit <b id="tProfit" class="text-emerald-300">¥0</b></span></div>
    <div class="flex gap-2 noprint">
     <button class="btn bg-[#0b0c10] border border-white/10" data-a="print">Print offer</button>
-    <button class="btn bg-emerald-400 text-black" data-a="accept">Accept and add to inventory</button>
+    <button class="btn bg-sky-500 text-white" data-a="accept">Accept and add to inventory</button>
    </div>
   </div>
   <div class="hidden print:block text-sm mt-8">上記の金額でお買い取りいたします。<br>We offer the amounts above for these items.<br><br>お客様署名 / Customer signature: ______________________</div>
@@ -104,7 +106,7 @@ td{@apply py-2.5 px-3}
     <select id="fRank" class="inp !w-auto"><option value="">All ranks</option><option>S</option><option>A</option><option>B</option><option>C</option><option>D</option></select>
    </div>
    <div class="flex gap-2">
-    <button class="btn bg-violet-600 text-white" data-a="add" data-i="inv">Add item</button>
+    <button class="btn bg-sky-600 text-white" data-a="add" data-i="inv">Add item</button>
     <button class="btn bg-[#0b0c10] border border-white/10" data-a="csv">Export CSV</button>
    </div>
   </div>
@@ -117,6 +119,8 @@ td{@apply py-2.5 px-3}
 </section>
 <section id="t4" class="space-y-4 hidden">
  <div id="stStats" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+ <details class="card" ontoggle="if(this.open)renderProfit()"><summary class="font-bold text-white cursor-pointer">📊 Monthly profit</summary><div class="mt-3 space-y-3"><input id="pmSel" type="month" class="inp !w-auto"><div id="pmBody"></div></div></details>
+ <details class="card" ontoggle="if(this.open)renderFix()"><summary class="font-bold text-white cursor-pointer">🔧 Fix-up list <span id="fxCount" class="text-gray-400 font-normal"></span></summary><div id="fxBody" class="mt-3 space-y-2 text-sm"></div></details>
  <div class="card space-y-3">
   <div class="flex gap-2"><input id="stQ" class="inp" placeholder="Search your STOCK sheet (name, JAN, SKU, console)"><select id="stSort" class="inp !w-auto"><option value="old">Oldest first</option><option value="new">Newest first</option></select></div>
   <div id="stPills" class="flex gap-2 overflow-x-auto pb-1"></div>
@@ -130,7 +134,7 @@ td{@apply py-2.5 px-3}
  <div class="card max-w-md mx-auto mt-10 space-y-3">
   <div class="font-bold text-white">Scan barcode</div>
   <div id="scanBox" class="w-full overflow-hidden rounded-xl"></div>
-  <div id="scanInfo" class="text-sm text-cyan-300 min-h-[1.5rem]"></div>
+  <div id="scanInfo" class="text-sm text-sky-300 min-h-[1.5rem]"></div>
   <div class="text-xs text-gray-400">Hold the barcode inside the frame. If asked, allow camera access.</div>
   <button class="btn bg-[#0b0c10] border border-white/10" data-a="closeScan">Done</button>
  </div>
@@ -142,15 +146,16 @@ td{@apply py-2.5 px-3}
   <div id="lowItem" class="text-sm text-gray-400"></div>
   <div><label class="lbl">New lowest price (JPY)</label><input id="low_price" type="number" min="0" class="inp"></div>
   <div><label class="lbl">eBay comp (USD) - change only if you rechecked it</label><input id="low_comp" type="number" min="0" step="0.01" class="inp"><button class="text-sm text-sky-300 mt-1" data-a="fe2">Check eBay sold listings ↗</button></div>
-  <div><label class="lbl">Seen at</label><div class="flex gap-2"><input id="low_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><select class="inp !w-24 shrink-0" data-store="low_loc"><option value="">Stores</option></select><button class="btn bg-cyan-400 text-black" data-a="gps" data-i="low_loc" aria-label="Find my location">📍</button></div></div>
+  <div><label class="lbl">Seen at</label><div class="flex gap-2"><input id="low_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><select class="inp !w-24 shrink-0" data-store="low_loc"><option value="">Stores</option></select><button class="btn bg-sky-500 text-white" data-a="gps" data-i="low_loc" aria-label="Find my location">📍</button></div></div>
   <div class="flex justify-end gap-2">
    <button class="btn bg-[#0b0c10]" data-a="closeLow">Cancel</button>
-   <button class="btn bg-yellow-300 text-black" data-a="saveLow">Save price</button>
+   <button class="btn bg-sky-500 text-white" data-a="saveLow">Save price</button>
   </div>
  </div>
 </div>
 
-<div id="toast" class="fixed bottom-5 right-4 z-50 hidden px-4 py-3 rounded-xl bg-[#12131C] border border-violet-500 text-sm"></div>
+<button id="fab" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 px-6 py-3 rounded-full bg-sky-500 text-white font-extrabold shadow-lg" data-a="scan" data-i="q1">📷 Scan next</button>
+<div id="toast" class="fixed bottom-20 right-4 z-50 hidden px-4 py-3 rounded-xl bg-[#12131C] border border-sky-500 text-sm"></div>
 
 <!-- Item form (used for both comps and inventory) -->
 <div id="formM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto">
@@ -158,7 +163,7 @@ td{@apply py-2.5 px-3}
   <div id="formTitle" class="font-bold text-white"></div>
   <div><label class="lbl">Title</label><input id="f_title" class="inp"></div>
   <div class="grid grid-cols-2 gap-3">
-   <div><label class="lbl">Catalog code / JAN (optional)</label><div class="flex gap-2"><input id="f_code" class="inp"><button class="btn bg-cyan-400 text-black" data-a="scan" data-i="f_code" aria-label="Scan barcode">📷</button></div></div>
+   <div><label class="lbl">Catalog code / JAN (optional)</label><div class="flex gap-2"><input id="f_code" class="inp"><button class="btn bg-sky-500 text-white" data-a="scan" data-i="f_code" aria-label="Scan barcode">📷</button></div></div>
    <div><label class="lbl">Console</label><select id="f_con" class="inp"></select></div>
   </div>
   <div class="grid grid-cols-4 gap-3">
@@ -168,7 +173,7 @@ td{@apply py-2.5 px-3}
   </div>
   <div class="grid grid-cols-2 gap-3">
    <div><label class="lbl">Rank</label><select id="f_rank" class="inp"><option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option></select></div>
-   <div id="locBox"><label id="f_locLbl" class="lbl">Bought at</label><div class="flex gap-2"><input id="f_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><select class="inp !w-24 shrink-0" data-store="f_loc"><option value="">Stores</option></select><button class="btn bg-cyan-400 text-black" data-a="gps" data-i="f_loc" aria-label="Find my location">📍</button></div>
+   <div id="locBox"><label id="f_locLbl" class="lbl">Bought at</label><div class="flex gap-2"><input id="f_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><select class="inp !w-24 shrink-0" data-store="f_loc"><option value="">Stores</option></select><button class="btn bg-sky-500 text-white" data-a="gps" data-i="f_loc" aria-label="Find my location">📍</button></div>
     <datalist id="stores"><option>Book Off Iikura</option><option>Book Off Notame</option><option>Hard Off Kasuga Shirouzu</option><option>Hard Off Nakama</option><option>Hard Off Outlets</option><option>Hard Off Yahatanishi</option><option>Manga Soukou Airport</option><option>Manga Soukou Costco</option><option>Manga Soukou Iizuka</option><option>Manga Soukou Kaizuka</option><option>Manga Soukou Tsukiguma</option><option>Mercari</option><option>Willy</option><option>Yahoo Auction</option><option>Yahoo Flea Market</option></datalist></div>
   </div>
   <button class="text-sm text-sky-300 text-left" data-a="fe">Check eBay sold listings for this title ↗</button>
@@ -176,12 +181,12 @@ td{@apply py-2.5 px-3}
   <div id="f_margin" class="text-sm text-gray-400"></div>
   <div class="flex justify-end gap-2">
    <button class="btn bg-[#0b0c10]" data-a="closeForm">Cancel</button>
-   <button class="btn bg-violet-600 text-white" data-a="saveForm">Save</button>
+   <button class="btn bg-sky-600 text-white" data-a="saveForm">Save</button>
   </div>
  </div>
 </div>
 
-<div id="setM" class="fixed inset-0 z-40 hidden bg-black/80 p-4">
+<div id="setM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto">
  <div class="card max-w-md mx-auto space-y-3 mt-10">
   <div class="font-bold text-white">Settings</div>
   <div><label class="lbl">Google Apps Script web app URL (leave empty to work offline)</label><input id="s_url" class="inp font-mono text-xs"></div>
@@ -198,10 +203,11 @@ td{@apply py-2.5 px-3}
   </div>
   <div><label class="lbl">or BUY anyway if profit is at least ¥ (0 = off)</label><input id="s_bigp" type="number" class="inp"></div>
   <div><label class="lbl">STOCK sheet profit factor (0.8 = keep 80% of list price)</label><input id="s_sf" type="number" step="0.01" class="inp"></div>
+  <details ontoggle="if(this.open)renderDiag()"><summary class="text-sm text-gray-300 cursor-pointer">🩺 Diagnostics</summary><div id="diag" class="mt-2 text-xs text-gray-400 space-y-1"></div><div class="flex gap-2 mt-2"><button class="btn bg-[#0b0c10] border border-white/10 !py-1.5" data-a="refresh">Refresh now</button><button class="btn bg-[#0b0c10] border border-white/10 !py-1.5" data-a="sendNow">Send unsent changes</button></div></details>
   <button class="btn bg-[#0b0c10] border border-white/10 text-sm w-full" data-a="forgetStores">Forget remembered store locations (use if the 📍 button picks the wrong store)</button>
   <div class="flex justify-end gap-2">
    <button class="btn bg-[#0b0c10]" data-a="settings">Cancel</button>
-   <button class="btn bg-violet-600 text-white" data-a="saveSet">Save settings</button>
+   <button class="btn bg-sky-600 text-white" data-a="saveSet">Save settings</button>
   </div>
  </div>
 </div>
@@ -223,7 +229,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
 const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',15),offer:load('offer',70),
- url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[])};
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[])};
 const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
 let cart=[],hits=[],con='All',formMode='comp';
 
@@ -264,11 +270,13 @@ const buyStats=c=>{
   :S.inv.filter(i=>i.paidJPY>0&&i.console===c.console&&i.format===c.format&&(c.code?i.code===c.code:i.title===c.title)).map(i=>({p:+i.paidJPY,d:i.date,l:i.location}));
  if(!src.length)return null;
  const byDate=[...src].sort((a,b)=>String(b.d).localeCompare(String(a.d))),lo=src.reduce((a,b)=>b.p<a.p?b:a);
- return {n:src.length,min:lo.p,minLoc:lo.l,max:Math.max(...src.map(x=>x.p)),last:{price:byDate[0].p,date:byDate[0].d}};
+ return {n:src.length,min:lo.p,minLoc:lo.l,max:Math.max(...src.map(x=>x.p)),last:{price:byDate[0].p,date:byDate[0].d},list:byDate};
 };
 const buyLine=(c,i)=>{const b=buyStats(c);if(!b)return '';
  const lo=lowP(c),better=!lo||b.min<lo;
- return `<div class="text-xs text-teal-300">🛒 You've bought this ${b.n}x: lowest ${yen(b.min)}${b.minLoc?' ('+esc(b.minLoc)+')':''}, highest ${yen(b.max)}, last ${yen(b.last.price)}${b.last.date?' on '+esc(b.last.date):''}.${better?` <button class="underline" data-a="setLow" data-i="${i}">Save as lowest price</button>`:''}</div>`};
+ const hr=(here.name&&Date.now()-here.t<6e5)?b.list.find(x=>norm(x.l)===norm(here.name)):null;
+ const atTxt=hr?' <b>At '+esc(here.name)+' you paid '+yen(hr.p)+' last time ('+esc(hr.d)+').</b>':'';
+ return `<div class="text-xs text-sky-300">🛒 You've bought this ${b.n}x: lowest ${yen(b.min)}${b.minLoc?' ('+esc(b.minLoc)+')':''}, highest ${yen(b.max)}, last ${yen(b.last.price)}${b.last.date?' on '+esc(b.last.date):''}.${atTxt}${better?` <button class="underline" data-a="setLow" data-i="${i}">Save as lowest price</button>`:''}</div>`};
 let salesMsg='';
 const saleStats=c=>{
  const m=S.sales.filter(x=>x.format===c.format&&typeNorm(x.type)===norm(c.console)&&((x.jan&&c.code&&x.jan===c.code)||norm(x.name)===norm(c.title)));
@@ -280,7 +288,7 @@ const saleStats=c=>{
  return {n:m.length,medNet:med,compUSD:Math.round(med/(1-S.fee/100)/S.rate*100)/100,last:m[0].saleDate,days:d.length?Math.round(d.reduce((a,b)=>a+b,0)/d.length):null};
 };
 const saleLine=(c,i)=>{const t=saleStats(c);if(!t)return '';
- return `<div class="text-xs text-violet-300">📈 You've sold this ${t.n}x: median net ${yen(t.medNet)} (about $${t.compUSD} as a comp)${t.days!==null?', about '+t.days+' days from purchase to sale':''}, last sold ${esc(t.last)}. <button class="underline" data-a="useSale" data-i="${i}">Use as comp</button></div>`};
+ return `<div class="text-xs text-sky-300">📈 You've sold this ${t.n}x: median net ${yen(t.medNet)} (about $${t.compUSD} as a comp)${t.days!==null?', about '+t.days+' days from purchase to sale':''}, last sold ${esc(t.last)}. <button class="underline" data-a="useSale" data-i="${i}">Use as comp</button></div>`};
 function salesNote(){
  if(salesMsg)return ' Sales: '+salesMsg;
  if(!S.sales.length)return '';
@@ -307,12 +315,16 @@ let stFilter='All',stMsg='',stOpen=0;
 const stCat=r=>ST_STATUS.find(x=>norm(x)===norm(r.status))||'Other';
 const stDays=r=>{const d=Math.floor((Date.now()-new Date(r.purchaseDate))/864e5);return isNaN(d)?'':d};
 const stProfit=r=>r.raw*S.stockF-r.purchase;
+const NEXT={'need to test':'Need photos','need photos':'On eBay','on ebay':'Shipped'};
+const stageBtn=r=>{const n=NEXT[norm(r.status)];return n&&r.row?`<button class="btn w-full mt-2 bg-sky-500 text-white" data-a="stage" data-i="${r.row}">→ ${n}</button>`:''};
+const stSug=r=>{if(r.raw>0)return null;const t=saleStats({format:r.format,console:typeNorm(r.type),code:r.jan,title:r.name});return t&&t.medNet>0?{n:t.n,medNet:t.medNet,list:Math.round(t.medNet/S.stockF/10)*10}:null};
+const suggestLine=r=>{const g=stSug(r);return g&&r.row?`<div class="text-xs text-sky-300 mt-1">💡 Suggested list price ${yen(g.list)} (median net ${yen(g.medNet)} from ${g.n} sale${g.n>1?'s':''}) <button class="underline" data-a="useList" data-i="${r.row}">Use</button></div>`:''};
 const statusOpts=r=>{const l=[...ST_STATUS];if(r.status&&!l.some(x=>norm(x)===norm(r.status)))l.unshift(r.status);
  return '<option value=""></option>'+l.map(x=>`<option ${norm(x)===norm(r.status)?'selected':''}>${esc(x)}</option>`).join('')};
 const stForm=r=>`<div class="mt-3 pt-3 border-t border-white/10 space-y-2">
  <div><label class="lbl">Name</label><input id="ed_name" class="inp" value="${esc(r.name)}"></div>
  <div class="grid grid-cols-2 gap-2">
-  <div><label class="lbl">JAN barcode</label><div class="flex gap-2"><input id="ed_jan" class="inp" inputmode="numeric" value="${esc(r.jan)}"><button class="btn bg-cyan-400 text-black" data-a="scan" data-i="ed_jan" aria-label="Scan barcode">📷</button></div></div>
+  <div><label class="lbl">JAN barcode</label><div class="flex gap-2"><input id="ed_jan" class="inp" inputmode="numeric" value="${esc(r.jan)}"><button class="btn bg-sky-500 text-white" data-a="scan" data-i="ed_jan" aria-label="Scan barcode">📷</button></div></div>
   <div><label class="lbl">Rank</label><select id="ed_rank" class="inp"><option value=""></option>${['S','A','B','C','D'].map(x=>`<option ${x===r.rank?'selected':''}>${x}</option>`).join('')}</select></div>
  </div>
  <div class="grid grid-cols-2 gap-2">
@@ -323,7 +335,7 @@ const stForm=r=>`<div class="mt-3 pt-3 border-t border-white/10 space-y-2">
   <div><label class="lbl">Purchase price ¥</label><input id="ed_buy" type="number" class="inp" value="${r.purchase||''}"></div>
   <div><label class="lbl">List price ¥ (Raw Price)</label><input id="ed_raw" type="number" class="inp" value="${r.raw||''}"></div>
  </div>
- <div class="flex justify-end gap-2"><button class="btn bg-[#0b0c10]" data-a="stOpen" data-i="${r.row}">Close</button><button class="btn bg-violet-600 text-white" data-a="stSave" data-i="${r.row}">Save to sheet</button></div></div>`;
+ <div class="flex justify-end gap-2"><button class="btn bg-[#0b0c10]" data-a="stOpen" data-i="${r.row}">Close</button><button class="btn bg-sky-600 text-white" data-a="stSave" data-i="${r.row}">Save to sheet</button></div></div>`;
 function renderStock(){
  const all=S.stock.filter(r=>!stSold(r)),q=$('stQ').value.trim().toLowerCase();
  $('stPills').innerHTML=['All','No JAN',...ST_STATUS,'Other'].map(c=>{const n=c==='All'?all.length:c==='No JAN'?all.filter(r=>!r.jan).length:all.filter(r=>stCat(r)===c).length;
@@ -335,11 +347,11 @@ function renderStock(){
  const priced=all.filter(r=>r.raw>0);
  $('stStats').innerHTML=st('Items',all.length,'not yet sold','text-white')
   +st('Money in stock',yen(all.reduce((t,r)=>t+r.purchase,0)),'purchase cost','text-white')
-  +st('List value',yen(priced.reduce((t,r)=>t+r.raw,0)),priced.length+' priced','text-cyan-300')
+  +st('List value',yen(priced.reduce((t,r)=>t+r.raw,0)),priced.length+' priced','text-sky-300')
   +st('Est. profit',yen(priced.reduce((t,r)=>t+stProfit(r),0)),'list price x '+S.stockF+' minus cost','text-emerald-300');
  $('stMsg').textContent=(stMsg||(S.stock.length?'':'No STOCK data yet. Check Code.gs is deployed and the tab name is right.'))+salesNote();
  $('stList').innerHTML=rows.length?rows.slice(0,200).map(r=>{const d=stDays(r),p=stProfit(r);
-  return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>${stOpen===r.row?stForm(r):''}</div>`}).join('')
+  return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>${suggestLine(r)}${stageBtn(r)}${stOpen===r.row?stForm(r):''}</div>`}).join('')
   :'<div class="text-center text-xs text-gray-500">Nothing matches.</div>';
  fillStoreSelects();
 }
@@ -381,11 +393,11 @@ async function flush(){
  flushing=false;
  setSync(S.queue.length?S.queue.length+' waiting to sync':(lastWarn?'Synced, warning: '+lastWarn:'Synced'));
 }
-function sync(){
+function sync(fresh){
  if(!S.url)return setSync('Local only');
  if(S.queue.length){flush().then(()=>{if(!S.queue.length)sync()});return}
  setSync('Syncing...');const my=rev;
- fetch(S.url+'?pw='+encodeURIComponent(S.pw)).then(r=>r.json()).then(d=>{
+ fetch(S.url+'?pw='+encodeURIComponent(S.pw)+(fresh===true?'&fresh=1':'')).then(r=>r.json()).then(d=>{
   if(d.error){setSync(d.error==='auth'?'Wrong passcode':'Server error');return}
   if(rev!==my||S.queue.length){setSync('Syncing again...');setTimeout(sync,500);return}
   if(d.comps&&d.comps.length)S.comps=d.comps.map(c=>({...c,storePriceJPY:+c.storePriceJPY,lowestJPY:+c.lowestJPY,compUSD:+c.compUSD}));
@@ -393,7 +405,7 @@ function sync(){
   if(Array.isArray(d.sales)){S.sales=d.sales;salesMsg=''}else if(d.sales&&d.sales.error)salesMsg=d.sales.error;
   const kept=!d.inv||(d.inv.length===0&&S.inv.length>0);
   if(!kept)S.inv=d.inv.map(c=>({...c,paidJPY:+c.paidJPY,compUSD:+c.compUSD}));
-  fillWatchMax();save();renderAll();setSync(kept&&S.inv.length?'Sheet has no inventory - kept phone copy':'Synced');
+  lastSyncT=Date.now();showAgo();fillWatchMax();save();renderAll();setSync(kept&&S.inv.length?'Sheet has no inventory - kept phone copy':'Synced');
  }).catch(()=>setSync('Offline - using saved data'));
 }
 
@@ -420,26 +432,27 @@ function search1(){
  $('grid').innerHTML=hits.length?hits.map(i=>{
   const c=S.comps[i],p=net(c)-lowP(c);
   return `<div class="card space-y-3 flex flex-col justify-between ${isW(c)?'ring-2 ring-yellow-300':''}">
-   <div><div class="flex justify-between gap-2 text-xs"><span class="font-mono text-cyan-300">${esc(c.code)}</span>
+   <div><div class="flex justify-between gap-2 text-xs"><span class="font-mono text-sky-300">${esc(c.code)}</span>
     <span><span class="text-gray-400 mr-1">${esc(c.format)}</span><span class="rk rk-${esc(c.rank)}">${esc(c.rank)}</span></span></div>
     <div class="flex justify-between gap-2 mt-2"><div class="font-bold text-white text-lg leading-snug">${esc(c.title)}</div><button data-a="watch" data-i="${i}" class="text-2xl leading-none ${isW(c)?'text-yellow-300':'text-gray-600'}" aria-label="Watchlist">★</button></div>
    ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}
    ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
    ${bandBox(c,lowP(c),i,false)}
-   <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-emerald-400 text-black shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
+   <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-sky-500 text-white shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
    ${buyLine(c,i)}
    ${saleLine(c,i)}
    <div class="text-xs text-gray-500">comp $${c.compUSD}${ageTxt(c)}${c.location?' | '+esc(c.location):''}</div>
    <div class="grid grid-cols-2 gap-2">
-    <button class="btn bg-emerald-400 text-black" data-a="toInv" data-i="${i}">Add to inventory</button>
-    <button class="btn bg-[#0b0c10] border border-white/10 text-cyan-300" data-a="toCart" data-i="${i}">Buy offer</button>
+    <button class="btn bg-sky-500 text-white" data-a="toInv" data-i="${i}">Add to inventory</button>
+    <button class="btn bg-[#0b0c10] border border-white/10 text-sky-300" data-a="toCart" data-i="${i}">Buy offer</button>
     <button class="btn bg-[#0b0c10] border border-white/10 text-yellow-300 col-span-2" data-a="low" data-i="${i}">Update prices</button>
+    <button class="btn bg-[#0b0c10] border border-white/10 text-white col-span-2" data-a="bask" data-i="${i}">＋ Add to basket</button>
     <a class="btn text-center bg-[#0b0c10] border border-white/10 text-sky-300 col-span-2" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold listings</a>
    </div></div>`}).join('')
  :`<div class="card sm:col-span-2 lg:col-span-3 text-center space-y-3"><div class="text-white font-bold">Nothing matches</div>
    <div class="text-xs text-gray-400">Add it to the comps database or straight into your inventory.</div>
-   <div class="flex justify-center gap-2"><button class="btn bg-violet-600 text-white" data-a="add" data-i="comp">New comp</button>
-   <button class="btn bg-emerald-400 text-black" data-a="add" data-i="inv">Add to inventory</button></div></div>`;
+   <div class="flex justify-center gap-2"><button class="btn bg-sky-600 text-white" data-a="add" data-i="comp">New comp</button>
+   <button class="btn bg-sky-500 text-white" data-a="add" data-i="inv">Add to inventory</button></div></div>`;
 }
 
 // ---- Tab 2 ----
@@ -449,20 +462,16 @@ function search2(){
  const m=S.comps.map((c,i)=>i).filter(i=>(S.comps[i].title+' '+S.comps[i].code).toLowerCase().includes(q)).sort(byTitle).slice(0,20);
  $('res2').innerHTML=m.length?m.map(i=>{const c=S.comps[i];return `<div class="flex items-center justify-between gap-3 bg-[#0b0c10] rounded-xl p-3">
   <div><div class="text-white text-sm font-semibold">${esc(c.title)} <span class="text-gray-400 font-normal">(${esc(c.console)}, ${esc(c.format)})</span></div>
-  <div class="text-xs text-gray-400">${esc(c.code)} | comp $${c.compUSD} | offer <b class="text-cyan-300">${yen(defOffer(c))}</b></div></div>
-  <button class="btn bg-cyan-400 text-black shrink-0" data-a="toCart" data-i="${i}">Add</button></div>`}).join('')
+  <div class="text-xs text-gray-400">${esc(c.code)} | comp $${c.compUSD} | offer <b class="text-sky-300">${yen(defOffer(c))}</b></div></div>
+  <button class="btn bg-sky-500 text-white shrink-0" data-a="toCart" data-i="${i}">Add</button></div>`}).join('')
  :'<div class="text-xs text-red-400">No match in the comps database.</div>';
 }
 function renderCart(){
  $('badge').textContent=cart.length;$('badge').classList.toggle('hidden',!cart.length);
  let pay=0,prof=0;
- $('cart').innerHTML=cart.length?cart.map((c,i)=>{pay+=c.offer;prof+=net(c)-c.offer;return `<tr>
-  <td><div class="text-white font-semibold">${esc(c.title)}</div><div class="text-xs text-gray-500">${esc(c.code)} | ${esc(c.console)}</div><a class="np text-xs text-sky-300" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold</a></td>
-  <td class="np"><input type="number" min="0" step="0.01" value="${c.compUSD||''}" placeholder="?" data-comp="${i}" class="inp !w-24 font-mono"></td><td class="np font-mono">${yen(net(c))}</td>
-  <td><input type="number" min="0" value="${c.offer}" data-offer="${i}" class="inp !w-28 font-mono text-cyan-300"></td>
-  <td class="np font-mono ${net(c)-c.offer>=0?'text-emerald-300':'text-red-400'}">${yen(net(c)-c.offer)}</td>
-  <td class="noprint"><button class="text-red-400" data-a="rm" data-i="${i}" aria-label="Remove">✕</button></td></tr>`}).join('')
- :'<tr><td colspan="6" class="text-center text-gray-500 text-xs">No items yet. Add items from Stock lookup or search above.</td></tr>';
+ $('cart').innerHTML=cart.length?cart.map((c,i)=>{pay+=c.offer;const p=net(c)-c.offer;prof+=p;
+  return `<div class="rounded-xl bg-[#0b0c10] p-3 space-y-2"><div class="flex justify-between gap-2"><div><div class="text-white font-semibold">${esc(c.title)}</div><div class="text-xs text-gray-500">${esc(c.console)} | ${esc(c.format)}${c.code?' | '+esc(c.code):''}</div></div><button class="text-red-400 text-xl noprint" data-a="rm" data-i="${i}" aria-label="Remove">✕</button></div><div class="grid grid-cols-2 gap-2"><div class="np"><label class="lbl">eBay comp ($)</label><input type="number" min="0" step="0.01" value="${c.compUSD||''}" placeholder="?" data-comp="${i}" class="inp font-mono"></div><div><label class="lbl">Offer (¥)<span class="hidden print:inline"> 買取額</span></label><input type="number" min="0" value="${c.offer}" data-offer="${i}" class="inp font-mono text-sky-300"></div></div><div class="np flex justify-between text-xs"><a class="text-sky-300" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold</a><span class="${p>=0?'text-emerald-300':'text-red-400'}">Profit ${yen(p)}</span></div></div>`}).join('')
+  :'<div class="text-center text-gray-500 text-xs py-3">No items yet. Add items from Stock lookup or search above.</div>';
  $('tPay').textContent=yen(pay);$('tProfit').textContent=yen(prof);
 }
 
@@ -478,20 +487,20 @@ function renderInv(){
  const sum=(a,f)=>a.reduce((t,i)=>t+f(i),0);
  const st=(l,v,sub,c)=>`<div class="card"><div class="text-xs text-gray-400">${l}</div><div class="text-xl font-extrabold font-mono ${c}">${v}</div><div class="text-xs text-gray-500">${sub}</div></div>`;
  $('stats').innerHTML=st('In stock',stock.length,yen(sum(stock,i=>i.paidJPY))+' spent','text-white')
-  +st('Projected profit',yen(sum(stock,prof)),'unsold, after fee','text-cyan-300')
+  +st('Projected profit',yen(sum(stock,prof)),'unsold, after fee','text-sky-300')
   +st('Sold',done.length,'items','text-white')
   +st('Realized profit',yen(sum(done,prof)),'from actual sales','text-emerald-300');
  const m=$('mSel').value||today().slice(0,7);
  const bought=S.inv.filter(i=>String(i.date).startsWith(m)),soldM=S.inv.filter(i=>sold(i)&&String(i.soldDate).startsWith(m));
  const spentM=sum(bought,i=>i.paidJPY),salesM=sum(soldM,i=>(+i.soldUSD||0)*S.rate*(1-S.fee/100));
- $('monthSum').innerHTML=st('Spent',yen(spentM),bought.length+' items bought','text-white')+st('Sales after fee',yen(salesM),soldM.length+' items sold','text-cyan-300')+st('Realized profit',yen(sum(soldM,prof)),'on items sold this month','text-emerald-300')+st('Sales minus spending',yen(salesM-spentM),'cash in minus out',salesM-spentM>=0?'text-emerald-300':'text-red-400');
+ $('monthSum').innerHTML=st('Spent',yen(spentM),bought.length+' items bought','text-white')+st('Sales after fee',yen(salesM),soldM.length+' items sold','text-sky-300')+st('Realized profit',yen(sum(soldM,prof)),'on items sold this month','text-emerald-300')+st('Sales minus spending',yen(salesM-spentM),'cash in minus out',salesM-spentM>=0?'text-emerald-300':'text-red-400');
  const g={};S.inv.forEach(i=>{const k=i.location||'Unknown',o=g[k]=g[k]||{n:0,spent:0,p:0};o.n++;o.spent+=i.paidJPY;o.p+=prof(i)});
  const list=Object.entries(g).sort((a,b)=>b[1].p-a[1].p);
  $('storeSum').innerHTML=list.length?list.map(([k,v])=>`<div class="flex justify-between gap-3"><span class="text-white truncate">${esc(k)} <span class="text-gray-500 text-xs">${v.n} items</span></span><b class="font-mono ${v.p>=0?'text-emerald-300':'text-red-400'}">${yen(v.p)} <span class="text-xs text-gray-500">${v.spent?Math.round(v.p/v.spent*100):0}%</span></b></div>`).join(''):'<div class="text-xs text-gray-500">Add items to see which stores pay off.</div>';
  const act=i=>sold(i)?'<span class="text-xs text-emerald-300 mr-3">Sold $'+(+i.soldUSD||0)+'</span>':`<button class="text-xs text-emerald-300 mr-3" data-a="sold" data-i="${esc(i.id)}">Mark sold</button>`;
  const dl=i=>`<button class="text-xs text-red-400" data-a="del" data-i="${esc(i.id)}">Delete</button>`;
  const none='Nothing here for these filters.';
- $('invBody').innerHTML=rows.length?rows.map(i=>{const p=prof(i);return `<tr><td><div class="text-white font-semibold">${esc(i.title)}</div><div class="text-xs text-cyan-300 font-mono">${esc(i.code)}</div></td><td>${esc(i.console)}</td><td>${esc(i.location||'-')}</td><td><span class="text-xs mr-1">${esc(i.format)}</span><span class="rk rk-${esc(i.rank)}">${esc(i.rank)}</span></td><td class="font-mono">${yen(i.paidJPY)}</td><td class="font-mono">$${i.compUSD}</td><td class="font-mono ${p>=0?'text-emerald-300':'text-red-400'}">${yen(p)}</td><td class="font-mono ${!sold(i)&&days(i)>60?'text-amber-300':''}">${days(i)}${sold(i)?' (sold)':''}</td><td class="whitespace-nowrap">${act(i)}${dl(i)}</td></tr>`}).join(''):'<tr><td colspan="9" class="text-center text-gray-500 text-xs">'+none+'</td></tr>';
+ $('invBody').innerHTML=rows.length?rows.map(i=>{const p=prof(i);return `<tr><td><div class="text-white font-semibold">${esc(i.title)}</div><div class="text-xs text-sky-300 font-mono">${esc(i.code)}</div></td><td>${esc(i.console)}</td><td>${esc(i.location||'-')}</td><td><span class="text-xs mr-1">${esc(i.format)}</span><span class="rk rk-${esc(i.rank)}">${esc(i.rank)}</span></td><td class="font-mono">${yen(i.paidJPY)}</td><td class="font-mono">$${i.compUSD}</td><td class="font-mono ${p>=0?'text-emerald-300':'text-red-400'}">${yen(p)}</td><td class="font-mono ${!sold(i)&&days(i)>60?'text-amber-300':''}">${days(i)}${sold(i)?' (sold)':''}</td><td class="whitespace-nowrap">${act(i)}${dl(i)}</td></tr>`}).join(''):'<tr><td colspan="9" class="text-center text-gray-500 text-xs">'+none+'</td></tr>';
  $('invCards').innerHTML=rows.length?rows.map(i=>{const p=prof(i);return `<details class="card !p-3"><summary class="flex justify-between items-center gap-3 list-none"><div class="min-w-0"><div class="text-white font-semibold truncate">${esc(i.title)}</div><div class="text-xs text-gray-400">${esc(i.console)} | paid ${yen(i.paidJPY)}${sold(i)?' | sold in '+days(i)+'d':' | '+days(i)+'d in stock'}</div></div><b class="font-mono ${p>=0?'text-emerald-300':'text-red-400'}">${yen(p)}</b></summary><div class="mt-3 text-xs text-gray-400 space-y-2"><div>${esc(i.code)} | ${esc(i.format)} <span class="rk rk-${esc(i.rank)}">${esc(i.rank)}</span></div><div>Bought at ${esc(i.location||'-')} | comp $${i.compUSD}</div><div>${act(i)}${dl(i)}</div></div></details>`}).join(''):'<div class="text-center text-xs text-gray-500">'+none+'</div>';
 }
 
@@ -509,7 +518,7 @@ function openForm(mode,item){
  margin();$('formM').classList.remove('hidden');$('f_title').focus();if(mode!=='cart')autoLoc('f_loc');fillStoreSelects();
 }
 function margin(){
- if(formMode==='cart'){if(!(+$('f_comp').value>0)){$('f_margin').textContent='No comp yet. The offer starts at ¥0, so set it in the list and add the comp later.';return}$('f_margin').innerHTML='Your offer: <b class="text-cyan-300">'+yen(defOffer({compUSD:+$('f_comp').value||0}))+'</b> ('+S.offer+'% of resale after fee). You can change it in the list.';return}
+ if(formMode==='cart'){if(!(+$('f_comp').value>0)){$('f_margin').textContent='No comp yet. The offer starts at ¥0, so set it in the list and add the comp later.';return}$('f_margin').innerHTML='Your offer: <b class="text-sky-300">'+yen(defOffer({compUSD:+$('f_comp').value||0}))+'</b> ('+S.offer+'% of resale after fee). You can change it in the list.';return}
  const p=net({compUSD:+$('f_comp').value||0})-(+$('f_price').value||0);
  $('f_margin').innerHTML='Estimated profit after fee: <b class="'+(p>=0?'text-emerald-300':'text-red-400')+'">'+yen(p)+'</b>';
 }
@@ -543,6 +552,7 @@ function saveForm(){buyNote='';
 function showTab(t){
  ['t1','t2','t3','t4'].forEach(id=>$(id).classList.toggle('hidden',id!==t));
  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.i===t));
+ $('fab').classList.toggle('hidden',t!=='t1');
  if(t==='t3')renderInv();
  if(t==='t4')renderStock();
 }
@@ -681,10 +691,91 @@ A.stSave=row=>{
  post('updateStock',{row:r.row,name:r.name,fields:f});
  Object.assign(r,nf);stOpen=0;save();renderStock();search1();toast('Updated '+nf.name+' (sent to the STOCK sheet)');
 };
+let lastSyncT=0,lastStage=null;
+function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
+ const m=Math.floor((Date.now()-lastSyncT)/60000);el.textContent=m<1?'updated just now':m<60?'updated '+m+' min ago':'updated '+Math.floor(m/60)+' h ago'}
+setInterval(showAgo,30000);
+A.refresh=()=>sync(true);
+A.sendNow=()=>{flush().then(()=>renderDiag())};
+A.stage=row=>{const r=S.stock.find(x=>x.row===+row);if(!r)return;const n=NEXT[norm(r.status)];if(!n)return;
+ const prev=r.status;r.status=n;lastStage={row:r.row,prev};
+ post('updateStock',{row:r.row,name:r.name,fields:{status:n}});save();renderStock();
+ toast('');const t=$('toast');t.innerHTML=esc(r.name)+' → '+esc(n)+' <button class="ml-3 text-sky-300 font-bold" data-a="undoStage">Undo</button>';
+ clearTimeout(t._t);t._t=setTimeout(()=>t.classList.add('hidden'),6000)};
+A.undoStage=()=>{if(!lastStage)return;const r=S.stock.find(x=>x.row===lastStage.row);
+ if(r){r.status=lastStage.prev;post('updateStock',{row:r.row,name:r.name,fields:{status:lastStage.prev}});save();renderStock()}
+ lastStage=null;$('toast').classList.add('hidden')};
+A.useList=row=>{const r=S.stock.find(x=>x.row===+row),g=r&&stSug(r);if(!g)return;
+ r.raw=g.list;post('updateStock',{row:r.row,name:r.name,fields:{raw:g.list}});save();renderStock();toast('List price set to '+yen(g.list))};
+
+function renderBasket(){
+ const b=S.basket;$('basketBox').classList.toggle('hidden',!b.length);if(!b.length)return;
+ $('bCount').textContent='('+b.length+')';
+ $('bList').innerHTML=b.map((x,k)=>{const p=x.compUSD?net(x)-x.price:null;
+  return `<div class="flex items-center gap-2 bg-[#0b0c10] rounded-xl p-2"><div class="min-w-0 flex-1"><div class="text-white text-sm truncate">${esc(x.title)}</div><div class="text-xs text-gray-500">${esc(x.console)} | ${esc(x.format)} | ${esc(x.rank)} | ${p===null?'no comp':'profit <span class="'+(p>=0?'text-emerald-300':'text-red-400')+'">'+yen(p)+'</span>'}</div></div><input type="number" inputmode="numeric" value="${x.price}" data-bpx="${k}" class="inp !w-24 !py-1.5"><button class="text-red-400 text-xl px-1" data-a="bRm" data-i="${k}" aria-label="Remove">✕</button></div>`}).join('');
+ const tot=b.reduce((t,x)=>t+x.price,0),pr=b.filter(x=>x.compUSD).reduce((t,x)=>t+net(x)-x.price,0),nc=b.filter(x=>!x.compUSD).length;
+ $('bTotals').innerHTML='Total <b class="text-white">'+yen(tot)+'</b> | expected profit <b class="'+(pr>=0?'text-emerald-300':'text-red-400')+'">'+yen(pr)+'</b>'+(nc?' <span class="text-gray-500">('+nc+' without a comp)</span>':'');
+}
+document.addEventListener('change',e=>{const k=e.target.dataset.bpx;if(k===undefined)return;S.basket[k].price=Math.max(0,+e.target.value||0);save();renderBasket()});
+A.bask=i=>{const c=S.comps[i],el=$('px'+i),v=+(el&&el.value)||lowP(c);
+ if(!(v>0)){toast('Type the shelf price first',false);if(el)el.focus();return}
+ S.basket.push({code:c.code,title:c.title,console:c.console,format:c.format,rank:$('rk'+i).value,compUSD:c.compUSD,price:v});
+ save();renderBasket();toast('Added to basket ('+S.basket.length+')')};
+A.bRm=k=>{S.basket.splice(k,1);save();renderBasket()};
+A.bClear=()=>{if(confirm('Empty the basket?')){S.basket=[];save();renderBasket()}};
+A.buyAll=()=>{
+ if(!S.basket.length)return toast('Basket is empty',false);
+ const name=(Date.now()-here.t<6e5&&here.name)||S.loc||'Unknown';
+ const items=S.basket.map((b,k)=>({id:'INV-'+Date.now()+'-'+k,code:b.code,title:b.title,console:b.console,paidJPY:b.price,format:b.format,rank:b.rank,compUSD:b.compUSD,location:name,date:today(),status:'',soldUSD:'',soldDate:''}));
+ S.inv.unshift(...items);post('addInv',{items});items.forEach(compFromBuy);toStock(items);
+ if(here.name&&name===here.name){S.loc=name;rememberStore(name)}
+ S.basket=[];save();renderBasket();search1();toast('Added '+items.length+' items to STOCK ('+name+')');
+};
+
+function renderProfit(){
+ const m=$('pmSel').value||today().slice(0,7),rows=S.sales.filter(x=>String(x.saleDate).startsWith(m));
+ if(!rows.length){$('pmBody').innerHTML='<div class="text-xs text-gray-500">No sales recorded in this month.</div>';return}
+ const kept=rows.reduce((t,x)=>t+x.net,0),cost=rows.reduce((t,x)=>t+(x.purchase||0),0),profit=kept-cost,nop=rows.filter(x=>!x.purchase).length;
+ const d=rows.map(x=>(new Date(x.saleDate)-new Date(x.purchaseDate))/864e5).filter(x=>isFinite(x)&&x>=0);
+ const g={};rows.forEach(x=>{const k=x.type||'Other',o=g[k]=g[k]||{n:0,p:0};o.n++;o.p+=x.net-(x.purchase||0)});
+ const list=Object.entries(g).sort((a,b)=>b[1].p-a[1].p);
+ const line=([k,v])=>`<div class="flex justify-between"><span>${esc(k)} <span class="text-gray-500 text-xs">${v.n} sold</span></span><b class="${v.p>=0?'text-emerald-300':'text-red-400'}">${yen(v.p)}</b></div>`;
+ const big=(l,v,c)=>`<div><div class="text-xs text-gray-400">${l}</div><b class="text-lg ${c}">${v}</b></div>`;
+ $('pmBody').innerHTML=`<div class="grid grid-cols-2 gap-3">${big('Items sold',rows.length,'text-white')}${big('Money kept',yen(kept),'text-white')}${big('Purchase cost',yen(cost),'text-white')}${big('Profit',yen(profit),profit>=0?'text-emerald-300':'text-red-400')}</div>${d.length?'<div class="text-xs text-gray-400">About '+Math.round(d.reduce((a,b)=>a+b,0)/d.length)+' days from purchase to sale</div>':''}<div class="text-xs text-gray-400 pt-1">Best consoles</div>${list.slice(0,3).map(line).join('')}${list.length>3?'<div class="text-xs text-gray-400 pt-1">Weakest consoles</div>'+list.slice(Math.max(3,list.length-2)).reverse().map(line).join(''):''}${nop?'<div class="text-xs text-amber-300 pt-1">'+nop+' sale(s) have no purchase price and count as ¥0 cost.</div>':''}<div class="text-xs text-gray-500">Money kept = what eBay paid you minus your shipping cost.</div>`;
+}
+
+let fxList=[];
+const closestComp=(name,type,format)=>{const tok=t=>new Set(String(t).toLowerCase().match(/[a-z0-9]{2,}/g)||[]),A=tok(name);if(!A.size)return null;
+ let best=null,bs=0;S.comps.forEach(c=>{if(c.format!==format||norm(c.console)!==typeNorm(type))return;const B=tok(c.title);let n=0;A.forEach(w=>{if(B.has(w))n++});const sc=n/(A.size+B.size-n);if(sc>bs){bs=sc;best=c}});return bs>=0.5?best:null};
+function renderFix(){
+ const jan=new Set(S.comps.filter(c=>c.code).map(c=>c.code+'|'+c.format)),ttl=new Set(S.comps.map(c=>norm(c.title)+'|'+c.format+'|'+norm(c.console)));
+ const ok=(n,f,t,j)=>(j&&jan.has(j+'|'+f))||ttl.has(norm(n)+'|'+f+'|'+typeNorm(t));
+ const st=S.stock.filter(r=>!stSold(r)&&r.row&&!ok(r.name,r.format,r.type,r.jan)).slice(0,40);
+ const seen=new Set();fxList=[];S.sales.forEach(x=>{const k=norm(x.name)+'|'+x.format+'|'+x.type;if(seen.has(k)||ok(x.name,x.format,x.type,x.jan))return;seen.add(k);fxList.push(x)});
+ $('fxCount').textContent='('+st.length+' stock, '+fxList.length+' sales)';
+ const box=h=>`<div class="bg-[#0b0c10] rounded-xl p-2">${h}</div>`;
+ $('fxBody').innerHTML='<div class="text-xs text-gray-400">STOCK items not matched to a comp</div>'+(st.length?st.map(r=>{const c=closestComp(r.name,r.type,r.format),ci=c?S.comps.indexOf(c):-1;
+  return box(`<div class="text-white">${esc(r.name)}</div><div class="text-xs text-gray-500">${esc(r.type)} | ${esc(r.format)}</div>${c?`<div class="text-xs text-sky-300">Did you mean: ${esc(c.title)}${c.code?' ('+esc(c.code)+')':''} <button class="underline" data-a="fxUse" data-i="${r.row}|${ci}">Use this name</button></div>`:''}<button class="text-xs underline" data-a="fxEdit" data-i="${r.row}">Edit</button>`)}).join(''):'<div class="text-xs text-gray-500">All matched.</div>')
+  +'<div class="text-xs text-gray-400 pt-2">Sold items not matched to a comp</div>'+(fxList.length?fxList.slice(0,40).map((x,k)=>box(`<div class="text-white">${esc(x.name)}</div><div class="text-xs text-gray-500">${esc(x.type)} | ${esc(x.format)}</div><button class="text-xs underline" data-a="fxFind" data-i="${k}">Find in comps</button>`)).join(''):'<div class="text-xs text-gray-500">All matched.</div>');
+}
+A.fxUse=v=>{const [row,ci]=v.split('|'),r=S.stock.find(x=>x.row===+row),c=S.comps[+ci];if(!r||!c)return;
+ const f={name:c.title};if(!r.jan&&c.code)f.jan=c.code;
+ post('updateStock',{row:r.row,name:r.name,fields:f});Object.assign(r,f);save();renderFix();renderStock();toast('Renamed to '+c.title)};
+A.fxEdit=row=>{const r=S.stock.find(x=>x.row===+row);if(!r)return;$('stQ').value=r.name;stFilter='All';stOpen=r.row;renderStock();$('stList').scrollIntoView({behavior:'smooth'})};
+A.fxFind=k=>{const x=fxList[k];if(!x)return;showTab('t1');$('q1').value=x.name.split(/\s+/).slice(0,2).join(' ');con='All';pills();search1();window.scrollTo(0,0)};
+
+function renderDiag(){
+ const row=(k,v)=>`<div class="flex justify-between gap-3"><span>${k}</span><b class="text-gray-200 text-right">${v}</b></div>`;
+ let kb='?';try{let n=0;for(const k in localStorage)if(k.startsWith('rh_'))n+=localStorage[k].length;kb=Math.round(n/1024)+' KB'}catch(e){}
+ $('diag').innerHTML=row('Comps loaded',S.comps.length)+row('STOCK rows',S.stock.length)+row('Sales history',S.sales.length)+row('Backup inventory items',S.inv.length)
+  +row('Unsent changes',S.queue.length)+row('Watchlist',S.watch.length)+row('Basket',S.basket.length)+row('Remembered stores',S.stores.length)
+  +row('Last sync',lastSyncT?new Date(lastSyncT).toLocaleTimeString():'not yet')+row('Phone storage used',kb)
+  +(stMsg?row('STOCK message',esc(stMsg)):'')+(salesMsg?row('Sales message',esc(salesMsg)):'')+row('Last server warning',esc(lastWarn||'none'));
+}
 let lastDel=null;
 A.del=id=>{
  lastDel=S.inv.find(i=>i.id===id);S.inv=S.inv.filter(i=>i.id!==id);post('delInv',{id});save();renderInv();
- toast('');const t=$('toast');t.innerHTML='Item deleted <button class="ml-3 text-cyan-300 font-bold" data-a="undo">Undo</button>';
+ toast('');const t=$('toast');t.innerHTML='Item deleted <button class="ml-3 text-sky-300 font-bold" data-a="undo">Undo</button>';
  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.add('hidden'),7000);
 };
 A.undo=()=>{if(!lastDel)return;S.inv.unshift(lastDel);post('addInv',{items:[lastDel]});lastDel=null;save();renderInv();$('toast').classList.add('hidden')};
@@ -736,10 +827,10 @@ $('fSt').addEventListener('change',renderInv);$('mSel').addEventListener('change
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('lowM').classList.add('hidden');$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
 
 function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1'+(S.autoRate?' (auto)':'');$('offLbl').textContent='('+S.offer+'% of net after '+S.fee+'% fee)'}
-function renderAll(){pills();search1();search2();renderCart();renderInv();renderWatch();renderStock()}
+function renderAll(){pills();search1();search2();renderCart();renderInv();renderWatch();renderStock();renderBasket()}
 
 CON.forEach(c=>{['f_con','fCon'].forEach(id=>{const o=document.createElement('option');o.value=o.textContent=c;$(id).appendChild(o)})});
-$('mSel').value=today().slice(0,7);
+$('mSel').value=today().slice(0,7);$('pmSel').value=today().slice(0,7);$('pmSel').addEventListener('change',renderProfit);
 S.stores=S.stores.filter(x=>!/mercari|yahoo|online|trade-in|customer|unknown/i.test(x.name)&&!S.stores.some(o=>o!==x&&o.name!==x.name&&dist(o,x)<30));save();
 fillStoreSelects();
 fillWatchMax();
