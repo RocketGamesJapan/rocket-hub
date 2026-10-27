@@ -258,6 +258,16 @@ function toStock(items){
  rows.forEach(x=>S.stock.push({name:x.title,sku:'',format:x.format,type:x.type,purchase:x.paidJPY,raw:0,status:x.status,purchaseDate:x.date,saleDate:'',location:x.location,jan:x.code,rank:x.rank}));
  return 'added to STOCK sheet';
 }
+const buyStats=c=>{
+ const src=S.stock.length?S.stock.filter(r=>r.purchase>0&&stMatch(r,c)).map(r=>({p:r.purchase,d:r.purchaseDate,l:r.location}))
+  :S.inv.filter(i=>i.paidJPY>0&&i.console===c.console&&i.format===c.format&&(c.code?i.code===c.code:i.title===c.title)).map(i=>({p:+i.paidJPY,d:i.date,l:i.location}));
+ if(!src.length)return null;
+ const byDate=[...src].sort((a,b)=>String(b.d).localeCompare(String(a.d))),lo=src.reduce((a,b)=>b.p<a.p?b:a);
+ return {n:src.length,min:lo.p,minLoc:lo.l,max:Math.max(...src.map(x=>x.p)),last:{price:byDate[0].p,date:byDate[0].d}};
+};
+const buyLine=(c,i)=>{const b=buyStats(c);if(!b)return '';
+ const lo=lowP(c),better=!lo||b.min<lo;
+ return `<div class="text-xs text-teal-300">🛒 You've bought this ${b.n}x: lowest ${yen(b.min)}${b.minLoc?' ('+esc(b.minLoc)+')':''}, highest ${yen(b.max)}, last ${yen(b.last.price)}${b.last.date?' on '+esc(b.last.date):''}.${better?` <button class="underline" data-a="setLow" data-i="${i}">Save as lowest price</button>`:''}</div>`};
 let salesMsg='';
 const saleStats=c=>{
  const m=S.sales.filter(x=>x.format===c.format&&typeNorm(x.type)===norm(c.console)&&((x.jan&&c.code&&x.jan===c.code)||norm(x.name)===norm(c.title)));
@@ -292,15 +302,32 @@ function compFromBuy(i){
  }
  return '';
 }
-let stFilter='All',stMsg='';
+let stFilter='All',stMsg='',stOpen=0;
 const stCat=r=>ST_STATUS.find(x=>norm(x)===norm(r.status))||'Other';
 const stDays=r=>{const d=Math.floor((Date.now()-new Date(r.purchaseDate))/864e5);return isNaN(d)?'':d};
 const stProfit=r=>r.raw*S.stockF-r.purchase;
+const statusOpts=r=>{const l=[...ST_STATUS];if(r.status&&!l.some(x=>norm(x)===norm(r.status)))l.unshift(r.status);
+ return '<option value=""></option>'+l.map(x=>`<option ${norm(x)===norm(r.status)?'selected':''}>${esc(x)}</option>`).join('')};
+const stForm=r=>`<div class="mt-3 pt-3 border-t border-white/10 space-y-2">
+ <div><label class="lbl">Name</label><input id="ed_name" class="inp" value="${esc(r.name)}"></div>
+ <div class="grid grid-cols-2 gap-2">
+  <div><label class="lbl">JAN barcode</label><div class="flex gap-2"><input id="ed_jan" class="inp" inputmode="numeric" value="${esc(r.jan)}"><button class="btn bg-cyan-400 text-black" data-a="scan" data-i="ed_jan" aria-label="Scan barcode">📷</button></div></div>
+  <div><label class="lbl">Rank</label><select id="ed_rank" class="inp"><option value=""></option>${['S','A','B','C','D'].map(x=>`<option ${x===r.rank?'selected':''}>${x}</option>`).join('')}</select></div>
+ </div>
+ <div class="grid grid-cols-2 gap-2">
+  <div><label class="lbl">Status</label><select id="ed_status" class="inp">${statusOpts(r)}</select></div>
+  <div><label class="lbl">Location</label><input id="ed_loc" list="stores" class="inp" value="${esc(r.location)}"></div>
+ </div>
+ <div class="grid grid-cols-2 gap-2">
+  <div><label class="lbl">Purchase price ¥</label><input id="ed_buy" type="number" class="inp" value="${r.purchase||''}"></div>
+  <div><label class="lbl">List price ¥ (Raw Price)</label><input id="ed_raw" type="number" class="inp" value="${r.raw||''}"></div>
+ </div>
+ <div class="flex justify-end gap-2"><button class="btn bg-[#0b0c10]" data-a="stOpen" data-i="${r.row}">Close</button><button class="btn bg-violet-600 text-white" data-a="stSave" data-i="${r.row}">Save to sheet</button></div></div>`;
 function renderStock(){
  const all=S.stock.filter(r=>!stSold(r)),q=$('stQ').value.trim().toLowerCase();
- $('stPills').innerHTML=['All',...ST_STATUS,'Other'].map(c=>{const n=c==='All'?all.length:all.filter(r=>stCat(r)===c).length;
+ $('stPills').innerHTML=['All','No JAN',...ST_STATUS,'Other'].map(c=>{const n=c==='All'?all.length:c==='No JAN'?all.filter(r=>!r.jan).length:all.filter(r=>stCat(r)===c).length;
   return n?`<button class="pill ${c===stFilter?'on':''}" data-a="stf" data-i="${esc(c)}">${esc(c)} ${n}</button>`:''}).join('');
- const rows=all.filter(r=>(stFilter==='All'||stCat(r)===stFilter)&&(!q||(r.name+' '+r.jan+' '+r.sku+' '+r.type).toLowerCase().includes(q)));
+ const rows=all.filter(r=>(stFilter==='All'||(stFilter==='No JAN'?!r.jan:stCat(r)===stFilter))&&(!q||(r.name+' '+r.jan+' '+r.sku+' '+r.type).toLowerCase().includes(q)));
  rows.sort((a,b)=>String(a.purchaseDate).localeCompare(String(b.purchaseDate)));
  if($('stSort').value==='new')rows.reverse();
  const st=(l,v,sub,c)=>`<div class="card"><div class="text-xs text-gray-400">${l}</div><div class="text-xl font-extrabold font-mono ${c}">${v}</div><div class="text-xs text-gray-500">${sub}</div></div>`;
@@ -311,7 +338,7 @@ function renderStock(){
   +st('Est. profit',yen(priced.reduce((t,r)=>t+stProfit(r),0)),'list price x '+S.stockF+' minus cost','text-emerald-300');
  $('stMsg').textContent=(stMsg||(S.stock.length?'':'No STOCK data yet. Check Code.gs is deployed and the tab name is right.'))+salesNote();
  $('stList').innerHTML=rows.length?rows.slice(0,200).map(r=>{const d=stDays(r),p=stProfit(r);
-  return `<div class="card !p-3"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${esc(r.name)}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>`}).join('')
+  return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>${stOpen===r.row?stForm(r):''}</div>`}).join('')
   :'<div class="text-center text-xs text-gray-500">Nothing matches.</div>';
 }
 const maxPay=c=>{const a=net(c)/(1+S.minPct/100),b=S.bigP>0?net(c)-S.bigP:-Infinity;return Math.max(0,Math.floor(Math.min(net(c)-S.minP,Math.max(a,b))))};
@@ -397,6 +424,7 @@ function search1(){
    ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
    ${bandBox(c,lowP(c),i,false)}
    <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-emerald-400 text-black shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
+   ${buyLine(c,i)}
    ${saleLine(c,i)}
    <div class="text-xs text-gray-500">comp $${c.compUSD}${ageTxt(c)}${c.location?' | '+esc(c.location):''}</div>
    <div class="grid grid-cols-2 gap-2">
@@ -631,11 +659,25 @@ A.fe=()=>{const t=$('f_title').value.trim();if(!t)return toast('Enter a title fi
 A.fe2=()=>window.open(ebay(S.comps[lowIdx]),'_blank');
 A.stf=c=>{stFilter=c;renderStock()};
 document.addEventListener('change',e=>{const k=e.target.dataset.wmax;if(k===undefined)return;S.watch[k].max=Math.max(0,+e.target.value||0);save();search1()});
+A.setLow=i=>{const c=S.comps[i],b=buyStats(c);if(!b)return;
+ c.lowestJPY=b.min;if(b.minLoc)c.location=b.minLoc;
+ post('updateLow',{code:c.code,title:c.title,console:c.console,format:c.format,lowestJPY:b.min,location:b.minLoc||''});
+ save();search1();toast('Lowest price set to '+yen(b.min))};
 A.useSale=i=>{const c=S.comps[i],t=saleStats(c);if(!t)return;
  if(c.compUSD&&!confirm('Replace the current comp $'+c.compUSD+' with $'+t.compUSD+'?'))return;
  c.compUSD=t.compUSD;c.compDate=today();
  post('updateLow',{code:c.code,title:c.title,console:c.console,format:c.format,lowestJPY:c.lowestJPY||0,location:c.location||'',compUSD:c.compUSD,compDate:c.compDate});
  save();search1();toast('Comp set to $'+c.compUSD)};
+A.stOpen=r=>{if(!+r)return toast('This item was just added. Reload the app, then open it.',false);stOpen=stOpen===+r?0:+r;renderStock()};
+A.stSave=row=>{
+ const r=S.stock.find(x=>x.row===+row);if(!r)return;
+ const nf={name:$('ed_name').value.trim(),jan:$('ed_jan').value.trim(),rank:$('ed_rank').value,status:$('ed_status').value,location:$('ed_loc').value.trim(),purchase:+$('ed_buy').value||0,raw:+$('ed_raw').value||0};
+ if(!nf.name)return toast('Name cannot be empty',false);
+ const f={};Object.keys(nf).forEach(k=>{if(nf[k]!==r[k])f[k]=nf[k]});
+ if(!Object.keys(f).length){stOpen=0;renderStock();return toast('Nothing changed')}
+ post('updateStock',{row:r.row,name:r.name,fields:f});
+ Object.assign(r,nf);stOpen=0;save();renderStock();search1();toast('Updated '+nf.name+' (sent to the STOCK sheet)');
+};
 let lastDel=null;
 A.del=id=>{
  lastDel=S.inv.find(i=>i.id===id);S.inv=S.inv.filter(i=>i.id!==id);post('delInv',{id});save();renderInv();
