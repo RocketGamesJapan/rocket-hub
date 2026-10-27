@@ -142,7 +142,7 @@ td{@apply py-2.5 px-3}
   <div id="lowItem" class="text-sm text-gray-400"></div>
   <div><label class="lbl">New lowest price (JPY)</label><input id="low_price" type="number" min="0" class="inp"></div>
   <div><label class="lbl">eBay comp (USD) - change only if you rechecked it</label><input id="low_comp" type="number" min="0" step="0.01" class="inp"><button class="text-sm text-sky-300 mt-1" data-a="fe2">Check eBay sold listings ↗</button></div>
-  <div><label class="lbl">Seen at</label><div class="flex gap-2"><input id="low_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><button class="btn bg-cyan-400 text-black" data-a="gps" data-i="low_loc" aria-label="Find my location">📍</button></div></div>
+  <div><label class="lbl">Seen at</label><div class="flex gap-2"><input id="low_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><select class="inp !w-24 shrink-0" data-store="low_loc"><option value="">Stores</option></select><button class="btn bg-cyan-400 text-black" data-a="gps" data-i="low_loc" aria-label="Find my location">📍</button></div></div>
   <div class="flex justify-end gap-2">
    <button class="btn bg-[#0b0c10]" data-a="closeLow">Cancel</button>
    <button class="btn bg-yellow-300 text-black" data-a="saveLow">Save price</button>
@@ -168,7 +168,7 @@ td{@apply py-2.5 px-3}
   </div>
   <div class="grid grid-cols-2 gap-3">
    <div><label class="lbl">Rank</label><select id="f_rank" class="inp"><option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option></select></div>
-   <div id="locBox"><label id="f_locLbl" class="lbl">Bought at</label><div class="flex gap-2"><input id="f_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><button class="btn bg-cyan-400 text-black" data-a="gps" data-i="f_loc" aria-label="Find my location">📍</button></div>
+   <div id="locBox"><label id="f_locLbl" class="lbl">Bought at</label><div class="flex gap-2"><input id="f_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><select class="inp !w-24 shrink-0" data-store="f_loc"><option value="">Stores</option></select><button class="btn bg-cyan-400 text-black" data-a="gps" data-i="f_loc" aria-label="Find my location">📍</button></div>
     <datalist id="stores"><option>Book Off Iikura</option><option>Book Off Notame</option><option>Hard Off Kasuga Shirouzu</option><option>Hard Off Nakama</option><option>Hard Off Outlets</option><option>Hard Off Yahatanishi</option><option>Manga Soukou Airport</option><option>Manga Soukou Costco</option><option>Manga Soukou Iizuka</option><option>Manga Soukou Kaizuka</option><option>Manga Soukou Tsukiguma</option><option>Mercari</option><option>Willy</option><option>Yahoo Auction</option><option>Yahoo Flea Market</option></datalist></div>
   </div>
   <button class="text-sm text-sky-300 text-left" data-a="fe">Check eBay sold listings for this title ↗</button>
@@ -198,6 +198,7 @@ td{@apply py-2.5 px-3}
   </div>
   <div><label class="lbl">or BUY anyway if profit is at least ¥ (0 = off)</label><input id="s_bigp" type="number" class="inp"></div>
   <div><label class="lbl">STOCK sheet profit factor (0.8 = keep 80% of list price)</label><input id="s_sf" type="number" step="0.01" class="inp"></div>
+  <button class="btn bg-[#0b0c10] border border-white/10 text-sm w-full" data-a="forgetStores">Forget remembered store locations (use if the 📍 button picks the wrong store)</button>
   <div class="flex justify-end gap-2">
    <button class="btn bg-[#0b0c10]" data-a="settings">Cancel</button>
    <button class="btn bg-violet-600 text-white" data-a="saveSet">Save settings</button>
@@ -316,7 +317,7 @@ const stForm=r=>`<div class="mt-3 pt-3 border-t border-white/10 space-y-2">
  </div>
  <div class="grid grid-cols-2 gap-2">
   <div><label class="lbl">Status</label><select id="ed_status" class="inp">${statusOpts(r)}</select></div>
-  <div><label class="lbl">Location</label><input id="ed_loc" list="stores" class="inp" value="${esc(r.location)}"></div>
+  <div><label class="lbl">Location</label><div class="flex gap-2"><input id="ed_loc" list="stores" class="inp" value="${esc(r.location)}"><select class="inp !w-24 shrink-0" data-store="ed_loc"><option value="">Stores</option></select></div></div>
  </div>
  <div class="grid grid-cols-2 gap-2">
   <div><label class="lbl">Purchase price ¥</label><input id="ed_buy" type="number" class="inp" value="${r.purchase||''}"></div>
@@ -340,6 +341,7 @@ function renderStock(){
  $('stList').innerHTML=rows.length?rows.slice(0,200).map(r=>{const d=stDays(r),p=stProfit(r);
   return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>${stOpen===r.row?stForm(r):''}</div>`}).join('')
   :'<div class="text-center text-xs text-gray-500">Nothing matches.</div>';
+ fillStoreSelects();
 }
 const maxPay=c=>{const a=net(c)/(1+S.minPct/100),b=S.bigP>0?net(c)-S.bigP:-Infinity;return Math.max(0,Math.floor(Math.min(net(c)-S.minP,Math.max(a,b))))};
 const bandBox=(c,price,i,typed)=>{
@@ -354,7 +356,7 @@ function toast(m,ok=true){const t=$('toast');t.textContent=m;t.style.borderColor
 function setSync(s){$('sync').textContent=s}
 
 // ---- Google Sheet sync (reads with GET, writes with POST) ----
-function post(action,data){S.queue.push({action,...data,pw:S.pw,qid:Date.now()+'-'+Math.random().toString(36).slice(2)});save();flush()}
+function post(action,data){rev++;S.queue.push({action,...data,pw:S.pw,qid:Date.now()+'-'+Math.random().toString(36).slice(2)});save();flush()}
 function updateRate(){
  if(!S.autoRate||!navigator.onLine||S.rateDate===today())return;
  fetch('https://open.er-api.com/v6/latest/USD').then(r=>r.json()).then(d=>{
@@ -362,7 +364,7 @@ function updateRate(){
   S.rate=Math.round(j*100)/100;S.rateDate=today();save();labels();renderAll();toast('Exchange rate updated: ¥'+S.rate+' / $1');
  }).catch(()=>{});
 }
-let flushing=false,lastWarn='';
+let flushing=false,lastWarn='',rev=0;
 async function flush(){
  if(!S.url||flushing||!S.queue.length||!navigator.onLine)return;
  flushing=true;lastWarn='';
@@ -382,9 +384,10 @@ async function flush(){
 function sync(){
  if(!S.url)return setSync('Local only');
  if(S.queue.length){flush().then(()=>{if(!S.queue.length)sync()});return}
- setSync('Syncing...');
+ setSync('Syncing...');const my=rev;
  fetch(S.url+'?pw='+encodeURIComponent(S.pw)).then(r=>r.json()).then(d=>{
   if(d.error){setSync(d.error==='auth'?'Wrong passcode':'Server error');return}
+  if(rev!==my||S.queue.length){setSync('Syncing again...');setTimeout(sync,500);return}
   if(d.comps&&d.comps.length)S.comps=d.comps.map(c=>({...c,storePriceJPY:+c.storePriceJPY,lowestJPY:+c.lowestJPY,compUSD:+c.compUSD}));
   if(d.stock){if(d.stock.rows){S.stock=d.stock.rows;stMsg=d.stock.missing&&d.stock.missing.length?'Columns not found in STOCK: '+d.stock.missing.join(', '):''}else stMsg=d.stock.error||''}
   if(Array.isArray(d.sales)){S.sales=d.sales;salesMsg=''}else if(d.sales&&d.sales.error)salesMsg=d.sales.error;
@@ -502,8 +505,8 @@ function openForm(mode,item){
  $('f_title').value=item?.title||'';$('f_code').value=item?.code||'';
  $('f_con').value=item?.console||CON[0];
  $('f_price').value=(item&&lowP(item))||1000;$('f_comp').value=item?.compUSD??'';
- $('f_fmt').value=item?.format||'CIB';$('f_rank').value=item?.rank||'B';$('f_loc').value=S.loc||'';
- margin();$('formM').classList.remove('hidden');$('f_title').focus();if(mode!=='cart')autoLoc('f_loc');
+ $('f_fmt').value=item?.format||'CIB';$('f_rank').value=item?.rank||'B';$('f_loc').value='';
+ margin();$('formM').classList.remove('hidden');$('f_title').focus();if(mode!=='cart')autoLoc('f_loc');fillStoreSelects();
 }
 function margin(){
  if(formMode==='cart'){if(!(+$('f_comp').value>0)){$('f_margin').textContent='No comp yet. The offer starts at ¥0, so set it in the list and add the comp later.';return}$('f_margin').innerHTML='Your offer: <b class="text-cyan-300">'+yen(defOffer({compUSD:+$('f_comp').value||0}))+'</b> ('+S.offer+'% of resale after fee). You can change it in the list.';return}
@@ -601,7 +604,7 @@ const dist=(a,b)=>{const R=6371000,r=x=>x*Math.PI/180,dl=r(b.lat-a.lat),dn=r(b.l
 function locate(){return new Promise((ok,no)=>{
  if(!navigator.geolocation)return no('This browser has no GPS support');
  navigator.geolocation.getCurrentPosition(async p=>{
-  const g={lat:p.coords.latitude,lng:p.coords.longitude};geo=g;
+  const g={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};geo=g;
   const near=S.stores.map(s=>({s,d:dist(g,s)})).filter(x=>x.d<150).sort((a,b)=>a.d-b.d)[0];
   if(near)return ok(near.s.name);
   try{
@@ -623,7 +626,7 @@ function autoLoc(id,manual){
  }).catch(m=>{el.placeholder=ph;if(manual)toast(m,false)});
 }
 function rememberStore(name){
- if(!name||!geo)return;
+ if(!name||!geo||(geo.acc&&geo.acc>100)||/mercari|yahoo|online|trade-in|customer|unknown/i.test(name))return;
  S.stores=S.stores.filter(s=>s.name!==name&&dist(s,geo)>=150);
  S.stores.push({name,lat:geo.lat,lng:geo.lng});
 }
@@ -691,11 +694,19 @@ A.sold=id=>{
  const f={status:'sold',soldUSD:n,soldDate:today()};Object.assign(it,f);post('updateInv',{id,fields:f});save();renderInv();toast('Marked as sold');
 };
 A.addManual=()=>{const q=$('q2').value.trim();openForm('cart',/^\d{8,14}$/.test(q)?{code:q,compUSD:''}:{title:q,compUSD:''})};
+function fillStoreSelects(){
+ const base=[...document.querySelectorAll('#stores option')].map(o=>o.value||o.textContent);
+ const all=[...new Set([...base,...S.stores.map(x=>x.name)])].sort((a,b)=>a.localeCompare(b));
+ document.querySelectorAll('select[data-store]').forEach(sel=>{sel.innerHTML='<option value="">Stores</option>'+all.map(n=>`<option>${esc(n)}</option>`).join('')});
+}
+document.addEventListener('change',e=>{const t=e.target.dataset.store;if(t===undefined)return;
+ if(e.target.value){$(t).value=e.target.value;$(t).dataset.touched='1'}e.target.value=''});
+A.forgetStores=()=>{S.stores=[];save();toast('Forgot all saved store locations')};
 let lowIdx=-1;
 A.low=i=>{lowIdx=+i;const c=S.comps[lowIdx];
  $('lowItem').textContent=c.title+' ('+c.console+') - now '+yen(lowP(c));
- $('low_price').value=lowP(c)||'';$('low_comp').value=c.compUSD||'';$('low_loc').value=S.loc||'';
- $('lowM').classList.remove('hidden');$('low_price').select();autoLoc('low_loc')};
+ $('low_price').value=lowP(c)||'';$('low_comp').value=c.compUSD||'';$('low_loc').value='';
+ $('lowM').classList.remove('hidden');$('low_price').select();autoLoc('low_loc');fillStoreSelects()};
 A.closeLow=()=>$('lowM').classList.add('hidden');
 A.saveLow=()=>{
  const c=S.comps[lowIdx],v=+$('low_price').value;
@@ -729,6 +740,8 @@ function renderAll(){pills();search1();search2();renderCart();renderInv();render
 
 CON.forEach(c=>{['f_con','fCon'].forEach(id=>{const o=document.createElement('option');o.value=o.textContent=c;$(id).appendChild(o)})});
 $('mSel').value=today().slice(0,7);
+S.stores=S.stores.filter(x=>!/mercari|yahoo|online|trade-in|customer|unknown/i.test(x.name)&&!S.stores.some(o=>o!==x&&o.name!==x.name&&dist(o,x)<30));save();
+fillStoreSelects();
 fillWatchMax();
 labels();renderAll();sync();
 window.addEventListener('online',()=>{sync();updateRate()});
