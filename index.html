@@ -27,6 +27,25 @@ th{@apply py-2 px-3 text-xs font-semibold text-gray-400 text-left}
 td{@apply py-2.5 px-3}
 @media print{header,.noprint,.np{display:none!important}body{background:#fff}*{color:#000!important}.card{border:0;background:#fff}.inp{background:#fff!important;border:0!important}}
 </style>
+<style>
+body.light{background:#f3f4f7;color:#111827}
+body.light header{background:rgba(243,244,247,.96)}
+body.light .card{background:#fff;border-color:#d5d9e2}
+body.light .inp{background:#fff;color:#111827;border-color:#bfc5d2}
+body.light [class*="bg-[#0b0c10]"]{background:#eceef3!important}
+body.light [class*="bg-[#12131C]"]{background:#fff!important}
+body.light .text-white{color:#111827!important}
+body.light .text-gray-200,body.light .text-gray-300{color:#2b3340!important}
+body.light .text-gray-400{color:#4b5563!important}
+body.light .text-gray-500,body.light .text-gray-600{color:#5b6472!important}
+body.light .text-sky-300{color:#0369a1!important}
+body.light .text-emerald-300{color:#047857!important}
+body.light .text-red-400,body.light .text-red-300{color:#b91c1c!important}
+body.light .text-amber-300{color:#b45309!important}
+body.light .text-yellow-300{color:#a16207!important}
+body.light .border-white\/10{border-color:#d5d9e2!important}
+body.light .pill{color:#374151}
+</style>
 </head>
 <body class="min-h-screen pb-28">
 <header class="sticky top-0 z-30 bg-[#0b0c10]/95 border-b border-white/10 px-4 py-3">
@@ -54,6 +73,7 @@ td{@apply py-2.5 px-3}
    <button class="btn bg-sky-600 text-white shrink-0" data-a="add" data-i="comp">New comp</button>
   </div>
   <div id="pills" class="flex gap-2 overflow-x-auto pb-1"></div>
+  <details><summary class="text-sm text-gray-300 cursor-pointer">🕘 Recent scans <span id="recCount"></span></summary><div id="recList" class="mt-2"></div></details>
   <details><summary class="text-sm text-yellow-300 cursor-pointer">★ Watchlist <span id="wCount"></span></summary><div id="wList" class="mt-2 space-y-2"></div></details>
  </div>
  <div id="basketBox" class="card hidden space-y-2">
@@ -121,6 +141,9 @@ td{@apply py-2.5 px-3}
  <div id="stStats" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
  <details class="card" ontoggle="if(this.open)renderProfit()"><summary class="font-bold text-white cursor-pointer">📊 Monthly profit</summary><div class="mt-3 space-y-3"><input id="pmSel" type="month" class="inp !w-auto"><div id="pmBody"></div></div></details>
  <details class="card" ontoggle="if(this.open)renderFix()"><summary class="font-bold text-white cursor-pointer">🔧 Fix-up list <span id="fxCount" class="text-gray-400 font-normal"></span></summary><div id="fxBody" class="mt-3 space-y-2 text-sm"></div></details>
+ <details class="card" ontoggle="if(this.open)renderAttn()"><summary class="font-bold text-white cursor-pointer">⚠ Needs attention <span id="attnCount" class="text-gray-400 font-normal"></span></summary><div id="attnBody" class="mt-3 space-y-2 text-sm"></div></details>
+ <details class="card" ontoggle="if(this.open)renderSlow()"><summary class="font-bold text-white cursor-pointer">🐌 Slow listings <span id="slowCount" class="text-gray-400 font-normal"></span></summary><div id="slowBody" class="mt-3 space-y-2 text-sm"></div></details>
+ <details class="card" ontoggle="if(this.open)renderGuide()"><summary class="font-bold text-white cursor-pointer">🎯 Buying guide</summary><div id="guideBody" class="mt-3 space-y-2 text-sm"></div></details>
  <div class="card space-y-3">
   <div class="flex gap-2"><input id="stQ" class="inp" placeholder="Search your STOCK sheet (name, JAN, SKU, console)"><select id="stSort" class="inp !w-auto"><option value="old">Oldest first</option><option value="new">Newest first</option></select></div>
   <div id="stPills" class="flex gap-2 overflow-x-auto pb-1"></div>
@@ -186,6 +209,12 @@ td{@apply py-2.5 px-3}
  </div>
 </div>
 
+<div id="soldM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-10">
+ <div class="font-bold text-white">Sale details</div><div id="sd_name" class="text-sm text-gray-400"></div>
+ <div><label class="lbl">Shipping cost (¥) - what Japan Post charged you</label><input id="sd_ship" type="number" inputmode="numeric" class="inp"></div>
+ <div><label class="lbl">Paid $ - what eBay paid you after fees</label><input id="sd_paid" type="number" step="0.01" inputmode="decimal" class="inp"></div>
+ <div><label class="lbl">Sale date</label><input id="sd_date" type="date" class="inp"></div>
+ <div class="flex justify-end gap-2"><button class="btn bg-[#0b0c10]" data-a="soldCancel">Cancel</button><button class="btn bg-sky-500 text-white" data-a="soldSave">Save as Shipped</button></div></div></div>
 <div id="setM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto">
  <div class="card max-w-md mx-auto space-y-3 mt-10">
   <div class="font-bold text-white">Settings</div>
@@ -203,6 +232,9 @@ td{@apply py-2.5 px-3}
   </div>
   <div><label class="lbl">or BUY anyway if profit is at least ¥ (0 = off)</label><input id="s_bigp" type="number" class="inp"></div>
   <div><label class="lbl">STOCK sheet profit factor (0.8 = keep 80% of list price)</label><input id="s_sf" type="number" step="0.01" class="inp"></div>
+  <label class="flex items-center gap-2 text-sm text-gray-300"><input id="s_light" type="checkbox"> Bright mode (light theme, easier in sunlight)</label>
+  <label class="flex items-center gap-2 text-sm text-gray-300"><input id="s_beep" type="checkbox"> Beep and vibrate after scanning</label>
+  <div><label class="lbl">Text size</label><select id="s_fs" class="inp"><option value="100">Normal</option><option value="112">Large</option><option value="125">Extra large</option></select></div>
   <details ontoggle="if(this.open)renderDiag()"><summary class="text-sm text-gray-300 cursor-pointer">🩺 Diagnostics</summary><div id="diag" class="mt-2 text-xs text-gray-400 space-y-1"></div><div class="flex gap-2 mt-2"><button class="btn bg-[#0b0c10] border border-white/10 !py-1.5" data-a="refresh">Refresh now</button><button class="btn bg-[#0b0c10] border border-white/10 !py-1.5" data-a="sendNow">Send unsent changes</button></div></details>
   <button class="btn bg-[#0b0c10] border border-white/10 text-sm w-full" data-a="forgetStores">Forget remembered store locations (use if the 📍 button picks the wrong store)</button>
   <div class="flex justify-end gap-2">
@@ -229,7 +261,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
 const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',15),offer:load('offer',70),
- url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[])};
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[]),light:load('light',false),fs:load('fs',100),beep:load('beep',true),recent:load('recent',[])};
 const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
 let cart=[],hits=[],con='All',formMode='comp';
 
@@ -315,6 +347,10 @@ let stFilter='All',stMsg='',stOpen=0;
 const stCat=r=>ST_STATUS.find(x=>norm(x)===norm(r.status))||'Other';
 const stDays=r=>{const d=Math.floor((Date.now()-new Date(r.purchaseDate))/864e5);return isNaN(d)?'':d};
 const stProfit=r=>r.raw*S.stockF-r.purchase;
+const listHelper=r=>{
+ const title=r.name+' '+r.type+' '+(r.format==='CIB'?'CIB':r.format==='New'?'New':'Loose')+' Japan';
+ const d=(l,y)=>y?`<div class="flex justify-between"><span>${l}</span><b>${yen(y)} (about $${(y/S.rate).toFixed(2)})</b></div>`:'';
+ return `<details class="mt-2"><summary class="text-sm text-sky-300 cursor-pointer">📋 Listing helper</summary><div class="mt-2 space-y-2 text-xs text-gray-300"><div class="flex gap-2"><input id="lh_title" class="inp" value="${esc(title)}"><button class="btn bg-sky-500 text-white" data-a="copyTitle">Copy</button></div><div class="flex justify-between"><span>eBay price (from your sheet)</span><b>${r.ebayUsd?'$'+r.ebayUsd.toFixed(2):'-'}</b></div><div class="flex justify-between"><span>List price (Raw Price)</span><b>${r.raw?yen(r.raw):'-'}</b></div>${d('Asia delivery',r.asia)}${d('US delivery',r.usDel)}${d('EU delivery',r.euDel)}${d('World delivery',r.worldDel)}</div></details>`};
 const NEXT={'need to test':'Need photos','need photos':'On eBay','on ebay':'Shipped'};
 const stageBtn=r=>{const n=NEXT[norm(r.status)];return n&&r.row?`<button class="btn w-full mt-2 bg-sky-500 text-white" data-a="stage" data-i="${r.row}">→ ${n}</button>`:''};
 const stSug=r=>{if(r.raw>0)return null;const t=saleStats({format:r.format,console:typeNorm(r.type),code:r.jan,title:r.name});return t&&t.medNet>0?{n:t.n,medNet:t.medNet,list:Math.round(t.medNet/S.stockF/10)*10}:null};
@@ -335,6 +371,7 @@ const stForm=r=>`<div class="mt-3 pt-3 border-t border-white/10 space-y-2">
   <div><label class="lbl">Purchase price ¥</label><input id="ed_buy" type="number" class="inp" value="${r.purchase||''}"></div>
   <div><label class="lbl">List price ¥ (Raw Price)</label><input id="ed_raw" type="number" class="inp" value="${r.raw||''}"></div>
  </div>
+ ${listHelper(r)}
  <div class="flex justify-end gap-2"><button class="btn bg-[#0b0c10]" data-a="stOpen" data-i="${r.row}">Close</button><button class="btn bg-sky-600 text-white" data-a="stSave" data-i="${r.row}">Save to sheet</button></div></div>`;
 function renderStock(){
  const all=S.stock.filter(r=>!stSold(r)),q=$('stQ').value.trim().toLowerCase();
@@ -354,6 +391,7 @@ function renderStock(){
   return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>${suggestLine(r)}${stageBtn(r)}${stOpen===r.row?stForm(r):''}</div>`}).join('')
   :'<div class="text-center text-xs text-gray-500">Nothing matches.</div>';
  fillStoreSelects();
+ $('attnCount').textContent='('+attnItems().length+')';$('slowCount').textContent='('+slowItems().length+')';
 }
 const maxPay=c=>{const a=net(c)/(1+S.minPct/100),b=S.bigP>0?net(c)-S.bigP:-Infinity;return Math.max(0,Math.floor(Math.min(net(c)-S.minP,Math.max(a,b))))};
 const bandBox=(c,price,i,typed)=>{
@@ -439,6 +477,8 @@ function search1(){
    ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
    ${bandBox(c,lowP(c),i,false)}
    <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-sky-500 text-white shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
+   <button class="btn w-full bg-[#0b0c10] border border-white/10 text-white" data-a="bask" data-i="${i}">＋ Add to basket</button>
+   <details><summary class="text-sm text-sky-300 cursor-pointer py-1">More ▾</summary><div class="space-y-2 pt-2">
    ${buyLine(c,i)}
    ${saleLine(c,i)}
    <div class="text-xs text-gray-500">comp $${c.compUSD}${ageTxt(c)}${c.location?' | '+esc(c.location):''}</div>
@@ -446,9 +486,8 @@ function search1(){
     <button class="btn bg-sky-500 text-white" data-a="toInv" data-i="${i}">Add to inventory</button>
     <button class="btn bg-[#0b0c10] border border-white/10 text-sky-300" data-a="toCart" data-i="${i}">Buy offer</button>
     <button class="btn bg-[#0b0c10] border border-white/10 text-yellow-300 col-span-2" data-a="low" data-i="${i}">Update prices</button>
-    <button class="btn bg-[#0b0c10] border border-white/10 text-white col-span-2" data-a="bask" data-i="${i}">＋ Add to basket</button>
     <a class="btn text-center bg-[#0b0c10] border border-white/10 text-sky-300 col-span-2" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold listings</a>
-   </div></div>`}).join('')
+   </div></div></details></div>`}).join('')
  :`<div class="card sm:col-span-2 lg:col-span-3 text-center space-y-3"><div class="text-white font-bold">Nothing matches</div>
    <div class="text-xs text-gray-400">Add it to the comps database or straight into your inventory.</div>
    <div class="flex justify-center gap-2"><button class="btn bg-sky-600 text-white" data-a="add" data-i="comp">New comp</button>
@@ -580,22 +619,23 @@ const A={
   const t=[h.join(','),...S.inv.map(i=>h.map(k=>q(i[k])).join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/csv'}));a.download='rocket-hub-inventory.csv';a.click();
  },
- settings:()=>{$('s_url').value=S.url;$('s_pw').value=S.pw;$('s_auto').checked=S.autoRate;$('s_minp').value=S.minP;$('s_minpct').value=S.minPct;$('s_bigp').value=S.bigP;$('s_sf').value=S.stockF;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('setM').classList.toggle('hidden')},
+ settings:()=>{$('s_url').value=S.url;$('s_pw').value=S.pw;$('s_auto').checked=S.autoRate;$('s_minp').value=S.minP;$('s_minpct').value=S.minPct;$('s_bigp').value=S.bigP;$('s_sf').value=S.stockF;$('s_light').checked=S.light;$('s_fs').value=String(S.fs);$('s_beep').checked=S.beep;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('setM').classList.toggle('hidden')},
  saveSet:()=>{
-  S.url=$('s_url').value.trim();S.pw=$('s_pw').value;S.autoRate=$('s_auto').checked;if(S.autoRate)S.rateDate='';S.minP=+$('s_minp').value||0;S.minPct=+$('s_minpct').value||0;S.bigP=+$('s_bigp').value||0;S.stockF=+$('s_sf').value||0.8;S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||15;S.offer=+$('s_off').value||70;
+  S.url=$('s_url').value.trim();S.pw=$('s_pw').value;S.autoRate=$('s_auto').checked;if(S.autoRate)S.rateDate='';S.minP=+$('s_minp').value||0;S.minPct=+$('s_minpct').value||0;S.bigP=+$('s_bigp').value||0;S.stockF=+$('s_sf').value||0.8;S.light=$('s_light').checked;S.fs=+$('s_fs').value||100;S.beep=$('s_beep').checked;applyLook();S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||15;S.offer=+$('s_off').value||70;
   save();$('setM').classList.add('hidden');labels();renderAll();sync();updateRate();toast('Settings saved');
  },
  closeForm:()=>$('formM').classList.add('hidden'),
  saveForm
 };
-let scanner=null,scanCb=null,lastCode='',lastT=0;
-function openScan(cb,multi){warmLoc();
+let scanner=null,scanCb=null,lastCode='',lastT=0,ac=null;
+function beep(){if(S.beep===false)return;try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.12)}catch(e){}if(navigator.vibrate)navigator.vibrate(60)}
+function openScan(cb,multi){warmLoc();try{ac=ac||new(window.AudioContext||window.webkitAudioContext)()}catch(e){}
  if(typeof Html5Qrcode==='undefined')return toast('Scanner failed to load. Check your connection and reload.',false);
  scanCb=cb;$('scanInfo').textContent='';$('scanM').classList.remove('hidden');
  const F=Html5QrcodeSupportedFormats;
  scanner=new Html5Qrcode('scanBox',{formatsToSupport:[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128,F.CODE_39],useBarCodeDetectorIfSupported:true});
  scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:140}},
-  txt=>{if(multi){const n=Date.now();if(txt===lastCode&&n-lastT<2500)return;lastCode=txt;lastT=n;if(navigator.vibrate)navigator.vibrate(80);scanCb(txt);return}const f=scanCb;closeScan();if(f)f(txt)},()=>{})
+  txt=>{if(multi){const n=Date.now();if(txt===lastCode&&n-lastT<2500)return;lastCode=txt;lastT=n;beep();scanCb(txt);return}const f=scanCb;beep();closeScan();if(f)f(txt)},()=>{})
   .catch(()=>{toast('Camera unavailable. Allow camera access for this site in your browser settings.',false);closeScan()});
 }
 function closeScan(){
@@ -603,7 +643,7 @@ function closeScan(){
  if(scanner){const s=scanner;scanner=null;s.stop().then(()=>s.clear()).catch(()=>{})}
 }
 A.scan=t=>openScan(v=>{
- if(t==='q1'){$('q1').value=v;con='All';pills();window._sc=1;search1();if(hits.length===1){const e=$('px'+hits[0]);if(e)e.focus()}}
+ if(t==='q1'){$('q1').value=v;con='All';pills();window._sc=1;search1();addRecent(v);if(hits.length===1){const e=$('px'+hits[0]);if(e)e.focus()}}
  else if(t==='q2'){$('q2').value=v;search2()}
  else $(t).value=v;
  toast('Scanned '+v);
@@ -691,6 +731,54 @@ A.stSave=row=>{
  post('updateStock',{row:r.row,name:r.name,fields:f});
  Object.assign(r,nf);stOpen=0;save();renderStock();search1();toast('Updated '+nf.name+' (sent to the STOCK sheet)');
 };
+function applyLook(){document.body.classList.toggle('light',!!S.light);document.documentElement.style.fontSize=(S.fs||100)+'%'}
+function addRecent(v){const label=hits.length?S.comps[hits[0]].title:v;S.recent=[{q:v,label},...S.recent.filter(x=>x.q!==v)].slice(0,20);save();renderRecent()}
+function renderRecent(){$('recCount').textContent='('+S.recent.length+')';
+ $('recList').innerHTML=S.recent.length?S.recent.map((x,i)=>`<button class="block w-full text-left text-sm text-gray-200 py-1" data-a="recent" data-i="${i}">${esc(x.label)} <span class="text-gray-500 text-xs">${esc(x.q)}</span></button>`).join(''):'<div class="text-xs text-gray-500">Nothing scanned yet.</div>'}
+A.recent=i=>{const x=S.recent[i];if(!x)return;$('q1').value=x.q;con='All';pills();search1();window.scrollTo(0,0)};
+A.copyTitle=()=>navigator.clipboard.writeText($('lh_title').value).then(()=>toast('Title copied'),()=>toast('Could not copy',false));
+
+let soldRow=0;
+function openSold(r){soldRow=r.row;$('sd_name').textContent=r.name;$('sd_ship').value=r.shipCost||'';$('sd_paid').value=r.paidUsd||'';$('sd_date').value=today();$('soldM').classList.remove('hidden');$('sd_ship').focus()}
+A.soldCancel=()=>$('soldM').classList.add('hidden');
+A.soldSave=()=>{const r=S.stock.find(x=>x.row===soldRow);if(!r)return;
+ const ship=+$('sd_ship').value||0,paid=+$('sd_paid').value||0,d=$('sd_date').value||today();
+ if(!(paid>0))return toast('Enter the Paid $ amount',false);
+ const f={status:'Shipped',shipCost:ship,paidUsd:paid,saleDate:d};
+ post('updateStock',{row:r.row,name:r.name,fields:f});Object.assign(r,f);
+ $('soldM').classList.add('hidden');save();renderStock();toast(r.name+' marked Shipped')};
+
+const daysSince=d=>{const x=Math.floor((Date.now()-new Date(d))/864e5);return isNaN(x)?null:x};
+function attnItems(){const out=[];
+ S.stock.filter(r=>!stSold(r)&&r.row).forEach(r=>{const why=[],st=norm(r.status),age=daysSince(r.purchaseDate);
+  if(!r.jan)why.push('no JAN');if(!r.rank)why.push('no rank');
+  if((st==='need photos'||st==='on ebay')&&!r.raw)why.push('no list price');
+  if((st==='need to test'||st==='need photos')&&age!==null&&age>21)why.push('waiting '+age+' days');
+  if(st==='shipped'&&(!r.shipCost||!r.paidUsd))why.push('missing shipping cost or Paid $');
+  if(why.length)out.push({r,why})});
+ return out}
+function renderAttn(){const l=attnItems();
+ $('attnBody').innerHTML=l.length?l.slice(0,60).map(({r,why})=>`<div class="bg-[#0b0c10] rounded-xl p-2"><div class="text-white">${esc(r.name)}</div><div class="text-xs text-amber-300">${esc(why.join(', '))}</div><button class="text-xs underline" data-a="fxEdit" data-i="${r.row}">Open</button></div>`).join('')+(l.length>60?'<div class="text-xs text-gray-500">Showing 60 of '+l.length+'.</div>':''):'<div class="text-xs text-gray-500">Nothing needs attention.</div>'}
+
+function slowItems(){return S.stock.filter(r=>!stSold(r)&&r.row&&norm(r.status)==='on ebay'&&r.raw>0).map(r=>({r,age:daysSince(r.priceAdjusted||r.purchaseDate)})).filter(x=>x.age!==null&&x.age>45).sort((a,b)=>b.age-a.age)}
+function renderSlow(){const l=slowItems();
+ $('slowBody').innerHTML=l.length?l.slice(0,40).map(({r,age})=>{const nw=Math.round(r.raw*0.9/10)*10,p=nw*S.stockF-r.purchase;
+  return `<div class="bg-[#0b0c10] rounded-xl p-2"><div class="text-white">${esc(r.name)}</div><div class="text-xs text-gray-400">${age} days since ${r.priceAdjusted?'the last price change':'purchase'} | list ${yen(r.raw)}</div><div class="text-xs ${p>=0?'text-emerald-300':'text-red-400'}">10% off = ${yen(nw)} (profit ${yen(p)})</div><button class="text-xs underline" data-a="drop" data-i="${r.row}">Drop 10% and mark adjusted today</button></div>`}).join(''):'<div class="text-xs text-gray-500">Nothing has been listed for a long time. (Counts items On eBay for more than 45 days.)</div>'}
+A.drop=row=>{const r=S.stock.find(x=>x.row===+row);if(!r)return;const nw=Math.round(r.raw*0.9/10)*10,d=today();
+ post('updateStock',{row:r.row,name:r.name,fields:{raw:nw,priceAdjusted:d}});Object.assign(r,{raw:nw,priceAdjusted:d});save();renderStock();renderSlow();toast('Recorded '+yen(nw)+'. Remember to change the price on eBay too.')};
+
+function renderGuide(){
+ const rows=S.sales.filter(x=>x.purchase>0);
+ if(rows.length<3){$('guideBody').innerHTML='<div class="text-xs text-gray-500">Not enough sales with purchase prices yet.</div>';return}
+ const grp=kf=>{const g={};rows.forEach(x=>{const k=kf(x),o=g[k]=g[k]||{n:0,cost:0,net:0,days:[]};o.n++;o.cost+=x.purchase;o.net+=x.net;const d=(new Date(x.saleDate)-new Date(x.purchaseDate))/864e5;if(isFinite(d)&&d>=0)o.days.push(d)});
+  return Object.entries(g).map(([k,o])=>({k,n:o.n,per:(o.net-o.cost)/o.n,days:o.days.length?o.days.reduce((a,b)=>a+b,0)/o.days.length:null}))};
+ const byCon=grp(x=>x.type||'Other').filter(x=>x.n>=3),byGame=grp(x=>x.name+' ('+x.type+')').filter(x=>x.n>=2);
+ const line=x=>`<div class="flex justify-between gap-3"><span class="truncate">${esc(x.k)} <span class="text-gray-500 text-xs">${x.n} sold</span></span><b class="${x.per>=0?'text-emerald-300':'text-red-400'} shrink-0">${yen(x.per)} each</b></div>`;
+ const sec=(t,l)=>l.length?'<div class="text-xs text-gray-400 pt-2">'+t+'</div>'+l.map(line).join(''):'';
+ const fast=byCon.filter(x=>x.days!==null).sort((a,b)=>a.days-b.days).slice(0,3).map(x=>`<div class="flex justify-between"><span>${esc(x.k)}</span><b>${Math.round(x.days)} days</b></div>`).join('');
+ $('guideBody').innerHTML=sec('Most profit per item: consoles (3+ sold)',[...byCon].sort((a,b)=>b.per-a.per).slice(0,4))+sec('Least profit per item: consoles',[...byCon].sort((a,b)=>a.per-b.per).slice(0,2))+(fast?'<div class="text-xs text-gray-400 pt-2">Fastest to sell: consoles</div>'+fast:'')+sec('Best games (2+ sold)',[...byGame].sort((a,b)=>b.per-a.per).slice(0,8))+'<div class="text-xs text-gray-500 pt-2">Based on '+rows.length+' sales that have a purchase price.</div>';
+}
+
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
  const m=Math.floor((Date.now()-lastSyncT)/60000);el.textContent=m<1?'updated just now':m<60?'updated '+m+' min ago':'updated '+Math.floor(m/60)+' h ago'}
@@ -698,6 +786,7 @@ setInterval(showAgo,30000);
 A.refresh=()=>sync(true);
 A.sendNow=()=>{flush().then(()=>renderDiag())};
 A.stage=row=>{const r=S.stock.find(x=>x.row===+row);if(!r)return;const n=NEXT[norm(r.status)];if(!n)return;
+ if(n==='Shipped'){openSold(r);return}
  const prev=r.status;r.status=n;lastStage={row:r.row,prev};
  post('updateStock',{row:r.row,name:r.name,fields:{status:n}});save();renderStock();
  toast('');const t=$('toast');t.innerHTML=esc(r.name)+' → '+esc(n)+' <button class="ml-3 text-sky-300 font-bold" data-a="undoStage">Undo</button>';
@@ -827,12 +916,13 @@ $('fSt').addEventListener('change',renderInv);$('mSel').addEventListener('change
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('lowM').classList.add('hidden');$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
 
 function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1'+(S.autoRate?' (auto)':'');$('offLbl').textContent='('+S.offer+'% of net after '+S.fee+'% fee)'}
-function renderAll(){pills();search1();search2();renderCart();renderInv();renderWatch();renderStock();renderBasket()}
+function renderAll(){pills();search1();search2();renderCart();renderInv();renderWatch();renderStock();renderBasket();renderRecent()}
 
 CON.forEach(c=>{['f_con','fCon'].forEach(id=>{const o=document.createElement('option');o.value=o.textContent=c;$(id).appendChild(o)})});
 $('mSel').value=today().slice(0,7);$('pmSel').value=today().slice(0,7);$('pmSel').addEventListener('change',renderProfit);
 S.stores=S.stores.filter(x=>!/mercari|yahoo|online|trade-in|customer|unknown/i.test(x.name)&&!S.stores.some(o=>o!==x&&o.name!==x.name&&dist(o,x)<30));save();
 fillStoreSelects();
+applyLook();
 fillWatchMax();
 labels();renderAll();sync();
 window.addEventListener('online',()=>{sync();updateRate()});
