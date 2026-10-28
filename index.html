@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rocket Hub POS</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#0f1117">
 <meta name="mobile-web-app-capable" content="yes">
@@ -56,7 +57,7 @@ body.light .pill{color:#374151}
 <body class="min-h-screen pb-28">
 <header class="sticky top-0 z-30 bg-[#0b0c10]/95 border-b border-white/10 px-4 py-3">
  <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
-  <div class="order-1 font-extrabold text-white">🚀 Rocket Hub <span class="text-gray-500 font-normal text-sm">Scout & Inventory</span></div>
+  <div class="order-1 font-extrabold text-white flex items-center gap-2"><img src="icon-192.png" alt="" class="w-8 h-8">Rocket Hub <span class="text-gray-500 font-normal text-sm">Scout & Inventory</span></div>
   <nav class="order-3 w-full sm:w-auto sm:order-2 flex bg-[#12131C] p-1 rounded-xl gap-1">
    <button class="tab on" data-a="tab" data-i="t1">Stock lookup</button>
    <button class="tab" data-a="tab" data-i="t2">Buy offers <span id="badge" class="hidden ml-1 bg-sky-600 text-white rounded-full px-1.5">0</span></button>
@@ -197,7 +198,8 @@ body.light .pill{color:#374151}
 <div id="formM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto">
  <div class="card max-w-lg mx-auto space-y-3 mt-6">
   <div id="formTitle" class="font-bold text-white"></div>
-  <div><label class="lbl">Title</label><input id="f_title" class="inp"></div>
+  <div><label class="lbl">Title</label><input id="f_title" class="inp" autocomplete="off"></div>
+  <div id="sugBox" class="hidden rounded-xl border border-white/10 bg-[#0b0c10] divide-y divide-white/10 overflow-hidden"></div>
   <div class="grid grid-cols-2 gap-3">
    <div><label class="lbl">Catalog code / JAN (optional)</label><div class="flex gap-2"><input id="f_code" class="inp"><button class="btn bg-sky-500 text-white" data-a="scan" data-i="f_code" aria-label="Scan barcode">📷</button></div></div>
    <div><label class="lbl">Console</label><select id="f_con" class="inp"></select></div>
@@ -587,6 +589,7 @@ function openForm(mode,item){
  $('f_price').value=(item&&lowP(item))||1000;$('f_comp').value=item?.compUSD??'';
  $('f_fmt').value=item?.format||'CIB';$('f_rank').value=item?.rank||'B';$('f_loc').value='';
  margin();$('formM').classList.remove('hidden');$('f_title').focus();if(mode!=='cart')autoLoc('f_loc');fillStoreSelects();
+ hideSug();if(!(item&&item.title)){if($('f_code').value&&!$('f_title').value)showSug('code');else if($('f_title').value.trim().length>1)showSug('title')}
 }
 function margin(){
  if(formMode==='cart'){if(!(+$('f_comp').value>0)){$('f_margin').textContent='No comp yet. The offer starts at ¥0, so set it in the list and add the comp later.';return}$('f_margin').innerHTML='Your offer: <b class="text-sky-300">'+yen(defOffer({compUSD:+$('f_comp').value||0}))+'</b> ('+S.offer+'% of resale after fee). You can change it in the list.';return}
@@ -610,11 +613,11 @@ function saveForm(){buyNote='';
   o.storePriceJPY=price;o.lowestJPY=price;o.location=loc;o.compDate=o.compUSD?today():'';
   const k=S.comps.findIndex(c=>c.console===o.console&&c.format===o.format&&(o.code?c.code===o.code:c.title===o.title));
   k>-1?S.comps[k]=o:S.comps.unshift(o);
-  post('addComp',o);search1();
+  post('addComp',o);fillStockJan(o);search1();
  }else{
   o.id='INV-'+Date.now();o.paidJPY=price;o.location=$('f_loc').value.trim()||'Unknown';o.date=today();
   S.loc=$('f_loc').value.trim();S.inv.unshift(o);post('addInv',{items:[o]});renderInv();
-  buyNote=[compFromBuy(o),toStock([o])].filter(Boolean).join(', ');search1();
+  buyNote=[compFromBuy(o),fillMissing(o),toStock([o])].filter(Boolean).join(', ');search1();
  }
  rememberStore(loc);save();$('formM').classList.add('hidden');toast('Saved '+o.title+(buyNote?' ('+buyNote+')':''));
 }
@@ -677,7 +680,7 @@ function closeScan(){
 A.scan=t=>openScan(v=>{
  if(t==='q1'){$('q1').value=v;con='All';pills();window._sc=1;search1();addRecent(v);if(hits.length===1){const e=$('px'+hits[0]);if(e)e.focus()}}
  else if(t==='q2'){$('q2').value=v;search2()}
- else $(t).value=v;
+ else{$(t).value=v;if(t==='f_code')showSug('code')}
  toast('Scanned '+v);
 });
 A.closeScan=closeScan;
@@ -734,7 +737,7 @@ A.quick=i=>{
  const name=(Date.now()-here.t<6e5&&here.name)||S.loc||'Unknown';
  const it={id:'INV-'+Date.now(),code:c.code,title:c.title,console:c.console,paidJPY:v,format:c.format||'CIB',rank:$('rk'+i).value,compUSD:c.compUSD,location:name,date:today(),status:'',soldUSD:'',soldDate:''};
  S.inv.unshift(it);if(here.name&&name===here.name){S.loc=name;rememberStore(name)}
- post('addInv',{items:[it]});const note=[compFromBuy(it),toStock([it])].filter(Boolean).join(', ');save();renderInv();
+ post('addInv',{items:[it]});const note=[compFromBuy(it),fillMissing(it),toStock([it])].filter(Boolean).join(', ');save();renderInv();
  search1();
  toast('Added '+c.title+' for '+yen(v)+' at '+name+(note?' ('+note+')':''));
 };
@@ -813,7 +816,7 @@ function renderGuide(){
 }
 
 // ---- activity log ----
-const logDesc=j=>({addInv:()=>'Inventory backup add: '+(j.items||[]).map(x=>x.title).join(', '),addComp:()=>'Comps_DB add: '+j.title,updateLow:()=>'Comps_DB update: '+j.title,
+const logDesc=j=>({addInv:()=>'Inventory backup add: '+(j.items||[]).map(x=>x.title).join(', '),addComp:()=>'Comps_DB add: '+j.title,fillComp:()=>'Comps_DB fill: '+j.title,updateLow:()=>'Comps_DB update: '+j.title,
  addStock:()=>'IN STOCK add: '+(j.items||[]).map(x=>x.title).join(', '),updateStock:()=>'IN STOCK edit: '+j.name+' ('+Object.keys(j.fields||{}).join(', ')+')',delInv:()=>'Inventory delete',updateInv:()=>'Inventory update'}[j.action]||(()=>j.action))();
 function logAdd(j){S.log.unshift({id:j.qid,t:Date.now(),d:logDesc(j),s:'waiting'});S.log=S.log.slice(0,100)}
 function logSet(id,w){const x=S.log.find(y=>y.id===id);if(x)x.s=w?'warning: '+w:'sent'}
@@ -914,6 +917,52 @@ function profitChart(){
  return `<div class="text-xs text-gray-400">Profit by month (last 12)</div><svg viewBox="0 0 ${W} ${H}" class="w-full">${bars}${gl}</svg>`;
 }
 
+// ---- match suggestions while typing in the add form ----
+let sugList=[];
+const REV=Object.fromEntries(Object.entries(TYPE_MAP).map(([k,v])=>[norm(v),k]));
+const appConsole=t=>{const r=REV[norm(t)]||t;return CON.find(c=>norm(c)===norm(r))||r};
+function sugSearch(q,field){
+ const n=norm(q),code=q.trim(),out=[],idx={},cand=[];
+ const score=(title,jan)=>{if(field==='code')return jan&&jan===code?0:(jan&&jan.includes(code)?1:9);
+  const t=norm(title);return t===n?0:t.startsWith(n)?1:t.includes(n)?2:n.split(/\s+/).every(w=>t.includes(w))?3:9};
+ S.comps.forEach(c=>{const s=score(c.title,c.code);if(s<9)cand.push({s,x:{title:c.title,code:c.code,console:c.console,format:c.format,src:'Comps'}})});
+ S.stock.forEach(r=>{const s=score(r.name,r.jan);if(s<9)cand.push({s:s+0.5,x:{title:r.name,code:r.jan,console:appConsole(r.type),format:r.format==='New'?'':r.format,src:'STOCK'}})});
+ cand.sort((a,b)=>a.s-b.s).forEach(({x})=>{const k=norm(x.title)+'|'+norm(x.console)+'|'+x.format;
+  if(idx[k]){if(!idx[k].code&&x.code)idx[k].code=x.code;return}idx[k]=x;out.push(x)});
+ return out.slice(0,6);
+}
+function showSug(field){
+ const q=(field==='code'?$('f_code'):$('f_title')).value.trim();
+ if(q.length<(field==='code'?4:2)){hideSug();return}
+ sugList=sugSearch(q,field);
+ if(!sugList.length){hideSug();return}
+ $('sugBox').innerHTML=sugList.map((x,i)=>`<button class="block w-full text-left px-3 py-2" data-a="sugPick" data-i="${i}"><div class="text-white text-sm">${esc(x.title)}</div><div class="text-xs text-gray-400">${esc(x.console)} | ${esc(x.format||'-')} | ${x.code?esc(x.code):'no JAN'} | ${x.src}</div></button>`).join('');
+ $('sugBox').classList.remove('hidden');
+}
+function hideSug(){$('sugBox').classList.add('hidden')}
+function setConsole(v){const sel=$('f_con');if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=o.textContent=v;sel.appendChild(o)}sel.value=v}
+A.sugPick=i=>{const x=sugList[i];if(!x)return;
+ $('f_title').value=x.title;if(x.code&&!$('f_code').value.trim())$('f_code').value=x.code;
+ if(x.console)setConsole(x.console);if(x.format==='CIB'||x.format==='Loose')$('f_fmt').value=x.format;
+ hideSug();margin()};
+
+// ---- fill in info that an existing record was missing ----
+function fillStockJan(o){
+ if(!o.code)return '';let n=0;
+ S.stock.filter(r=>!r.jan&&r.row&&stMatch(r,{console:o.console,format:o.format,code:o.code,title:o.title})).forEach(r=>{
+  post('updateStock',{row:r.row,name:r.name,fields:{jan:o.code}});r.jan=o.code;n++});
+ return n?'JAN added to '+n+' STOCK row'+(n>1?'s':''):'';
+}
+function fillMissing(o){
+ const notes=[],c=S.comps.find(x=>x.console===o.console&&x.format===o.format&&((o.code&&x.code===o.code)||norm(x.title)===norm(o.title)));
+ if(c){const f={},code0=c.code;
+  if(!c.code&&o.code)f.code=o.code;
+  if(!c.compUSD&&+o.compUSD>0){f.compUSD=+o.compUSD;f.compDate=today()}
+  if(Object.keys(f).length){Object.assign(c,f);post('fillComp',{title:c.title,console:c.console,format:c.format,code0,fields:f});notes.push('comps entry completed')}}
+ const j=fillStockJan(o);if(j)notes.push(j);
+ return notes.join(', ');
+}
+
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
  const m=Math.floor((Date.now()-lastSyncT)/60000);el.textContent=m<1?'updated just now':m<60?'updated '+m+' min ago':'updated '+Math.floor(m/60)+' h ago'}
@@ -950,7 +999,7 @@ A.buyAll=()=>{
  if(!S.basket.length)return toast('Basket is empty',false);
  const name=(Date.now()-here.t<6e5&&here.name)||S.loc||'Unknown';
  const items=S.basket.map((b,k)=>({id:'INV-'+Date.now()+'-'+k,code:b.code,title:b.title,console:b.console,paidJPY:b.price,format:b.format,rank:b.rank,compUSD:b.compUSD,location:name,date:today(),status:'',soldUSD:'',soldDate:''}));
- S.inv.unshift(...items);post('addInv',{items});items.forEach(compFromBuy);toStock(items);
+ S.inv.unshift(...items);post('addInv',{items});items.forEach(i=>{compFromBuy(i);fillMissing(i)});toStock(items);
  if(here.name&&name===here.name){S.loc=name;rememberStore(name)}
  S.basket=[];save();renderBasket();search1();toast('Added '+items.length+' items to STOCK ('+name+')');
 };
@@ -1046,6 +1095,7 @@ document.addEventListener('change',e=>{
  }
 });
 ['f_price','f_comp'].forEach(id=>$(id).addEventListener('input',margin));
+$('f_title').addEventListener('input',()=>showSug('title'));$('f_code').addEventListener('input',()=>showSug('code'));
 $('q1').addEventListener('input',search1);$('q2').addEventListener('input',search2);
 $('fSt').addEventListener('change',renderInv);$('mSel').addEventListener('change',renderInv);$('stQ').addEventListener('input',renderStock);$('stSort').addEventListener('change',renderStock);$('fCon').addEventListener('change',renderInv);$('fRank').addEventListener('change',renderInv);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('lowM').classList.add('hidden');$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
