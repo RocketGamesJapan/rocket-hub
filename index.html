@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rocket Hub POS</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0f1117">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rocket Hub">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -67,6 +73,7 @@ body.light .pill{color:#374151}
 
 <section id="t1" class="space-y-4">
  <button class="w-full py-6 rounded-2xl bg-sky-500 text-white text-xl font-extrabold" data-a="scan" data-i="q1">📷 Scan barcode</button>
+ <button class="w-full py-3 rounded-2xl bg-[#12131C] border border-sky-400/40 text-sky-300 font-bold" data-a="shelf">📚 Shelf scan (keep scanning, review the list)</button>
  <div class="card space-y-3">
   <div class="flex gap-2">
    <input id="q1" class="inp" placeholder="Title, catalog code or JAN barcode" autocomplete="off">
@@ -76,6 +83,7 @@ body.light .pill{color:#374151}
   <details><summary class="text-sm text-gray-300 cursor-pointer">🕘 Recent scans <span id="recCount"></span></summary><div id="recList" class="mt-2"></div></details>
   <details><summary class="text-sm text-yellow-300 cursor-pointer">★ Watchlist <span id="wCount"></span></summary><div id="wList" class="mt-2 space-y-2"></div></details>
  </div>
+ <div id="shelfBox" class="card hidden space-y-2"><div class="flex justify-between items-center"><div class="font-bold text-white">📚 Shelf scan results <span id="shCount" class="text-gray-400"></span></div><button class="text-xs text-red-400" data-a="shClear">Clear</button></div><div id="shelfList" class="space-y-2"></div></div>
  <div id="basketBox" class="card hidden space-y-2">
   <div class="flex justify-between items-center"><div class="font-bold text-white">🛒 Basket <span id="bCount" class="text-gray-400"></span></div><button class="text-xs text-red-400" data-a="bClear">Empty basket</button></div>
   <div id="bList" class="space-y-2"></div>
@@ -138,26 +146,31 @@ body.light .pill{color:#374151}
  </div>
 </section>
 <section id="t4" class="space-y-4 hidden">
+ <div class="flex gap-2"><button class="btn bg-sky-500 text-white flex-1" data-a="testOpen">🧪 Test queue <span id="tqCount"></span></button><button class="btn bg-[#0b0c10] border border-white/10 text-white" data-a="selToggle">☑ Select</button></div>
  <div id="stStats" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
- <details class="card" ontoggle="if(this.open)renderProfit()"><summary class="font-bold text-white cursor-pointer">📊 Monthly profit</summary><div class="mt-3 space-y-3"><input id="pmSel" type="month" class="inp !w-auto"><div id="pmBody"></div></div></details>
+ <details class="card" ontoggle="if(this.open)renderProfit()"><summary class="font-bold text-white cursor-pointer">📊 Monthly profit</summary><div class="mt-3 space-y-3"><div id="pmAll" class="text-sm"></div><div id="pmChart"></div><input id="pmSel" type="month" class="inp !w-auto"><div id="pmBody"></div></div></details>
  <details class="card" ontoggle="if(this.open)renderFix()"><summary class="font-bold text-white cursor-pointer">🔧 Fix-up list <span id="fxCount" class="text-gray-400 font-normal"></span></summary><div id="fxBody" class="mt-3 space-y-2 text-sm"></div></details>
  <details class="card" ontoggle="if(this.open)renderAttn()"><summary class="font-bold text-white cursor-pointer">⚠ Needs attention <span id="attnCount" class="text-gray-400 font-normal"></span></summary><div id="attnBody" class="mt-3 space-y-2 text-sm"></div></details>
  <details class="card" ontoggle="if(this.open)renderSlow()"><summary class="font-bold text-white cursor-pointer">🐌 Slow listings <span id="slowCount" class="text-gray-400 font-normal"></span></summary><div id="slowBody" class="mt-3 space-y-2 text-sm"></div></details>
  <details class="card" ontoggle="if(this.open)renderGuide()"><summary class="font-bold text-white cursor-pointer">🎯 Buying guide</summary><div id="guideBody" class="mt-3 space-y-2 text-sm"></div></details>
+ <details class="card" ontoggle="if(this.open)renderRefresh()"><summary class="font-bold text-white cursor-pointer">🔄 Comp refresh list <span id="rfCount" class="text-gray-400 font-normal"></span></summary><div id="rfBody" class="mt-3 space-y-2 text-sm"></div></details>
+ <details class="card" ontoggle="if(this.open)renderTied()"><summary class="font-bold text-white cursor-pointer">💰 Money tied up</summary><div id="tiedBody" class="mt-3 space-y-2 text-sm"></div></details>
  <div class="card space-y-3">
   <div class="flex gap-2"><input id="stQ" class="inp" placeholder="Search your STOCK sheet (name, JAN, SKU, console)"><select id="stSort" class="inp !w-auto"><option value="old">Oldest first</option><option value="new">Newest first</option></select></div>
   <div id="stPills" class="flex gap-2 overflow-x-auto pb-1"></div>
   <div id="stMsg" class="text-xs text-amber-300"></div>
+  <div id="stBar" class="hidden flex flex-wrap items-center gap-2 text-sm"></div>
   <div id="stList" class="space-y-2"></div>
  </div>
 </section>
 </main>
 
-<div id="scanM" class="fixed inset-0 z-50 hidden bg-black/90 p-4">
+<div id="scanM" class="fixed inset-0 z-50 hidden bg-black/90 p-4 overflow-y-auto">
  <div class="card max-w-md mx-auto mt-10 space-y-3">
   <div class="font-bold text-white">Scan barcode</div>
   <div id="scanBox" class="w-full overflow-hidden rounded-xl"></div>
   <div id="scanInfo" class="text-sm text-sky-300 min-h-[1.5rem]"></div>
+  <div id="shelfMini" class="space-y-1 text-sm"></div>
   <div class="text-xs text-gray-400">Hold the barcode inside the frame. If asked, allow camera access.</div>
   <button class="btn bg-[#0b0c10] border border-white/10" data-a="closeScan">Done</button>
  </div>
@@ -209,6 +222,21 @@ body.light .pill{color:#374151}
  </div>
 </div>
 
+<div id="padM" class="fixed inset-0 z-50 hidden bg-black/80 p-4"><div class="card max-w-xs mx-auto mt-16 space-y-3">
+ <div class="text-center text-sm text-gray-400">Shelf price (¥)</div>
+ <div id="padVal" class="text-center text-4xl font-extrabold text-white font-mono min-h-[3rem]">0</div>
+ <div class="grid grid-cols-3 gap-2"><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="1">1</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="2">2</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="3">3</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="4">4</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="5">5</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="6">6</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="7">7</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="8">8</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="9">9</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="00">00</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="0">0</button><button class="btn bg-[#0b0c10] border border-white/10 text-white text-2xl py-4" data-a="padKey" data-i="back">⌫</button></div>
+ <div class="flex gap-2"><button class="btn bg-[#0b0c10] flex-1" data-a="padCancel">Cancel</button><button class="btn bg-sky-500 text-white flex-1" data-a="padOk">OK</button></div></div></div>
+<div id="testM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-8">
+ <div class="flex justify-between"><div class="font-bold text-white">🧪 Test queue</div><div id="tProg" class="text-xs text-gray-400"></div></div>
+ <div id="tItem"></div>
+ <div class="grid grid-cols-2 gap-2">
+  <button class="btn bg-sky-500 text-white py-3" data-a="testSet" data-i="Need photos">✅ Works</button>
+  <button class="btn bg-[#0b0c10] border border-white/10 text-white py-3" data-a="testSet" data-i="Need to buy box">📦 Needs box</button>
+  <button class="btn bg-[#0b0c10] border border-white/10 text-white py-3" data-a="testSet" data-i="Need to buy manual">📖 Needs manual</button>
+  <button class="btn bg-[#0b0c10] border border-red-400/50 text-red-400 py-3" data-a="testSet" data-i="Faulty">❌ Faulty</button>
+ </div>
+ <div class="flex justify-between gap-2"><button class="btn bg-[#0b0c10]" data-a="testUndo">↩ Undo</button><button class="btn bg-[#0b0c10]" data-a="testSkip">Skip →</button><button class="btn bg-[#0b0c10]" data-a="testClose">Close</button></div></div></div>
 <div id="soldM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-10">
  <div class="font-bold text-white">Sale details</div><div id="sd_name" class="text-sm text-gray-400"></div>
  <div><label class="lbl">Shipping cost (¥) - what Japan Post charged you</label><input id="sd_ship" type="number" inputmode="numeric" class="inp"></div>
@@ -232,9 +260,11 @@ body.light .pill{color:#374151}
   </div>
   <div><label class="lbl">or BUY anyway if profit is at least ¥ (0 = off)</label><input id="s_bigp" type="number" class="inp"></div>
   <div><label class="lbl">STOCK sheet profit factor (0.8 = keep 80% of list price)</label><input id="s_sf" type="number" step="0.01" class="inp"></div>
+  <div><label class="lbl">Monthly profit goal ¥ (0 = none)</label><input id="s_goal" type="number" class="inp"></div>
   <label class="flex items-center gap-2 text-sm text-gray-300"><input id="s_light" type="checkbox"> Bright mode (light theme, easier in sunlight)</label>
   <label class="flex items-center gap-2 text-sm text-gray-300"><input id="s_beep" type="checkbox"> Beep and vibrate after scanning</label>
   <div><label class="lbl">Text size</label><select id="s_fs" class="inp"><option value="100">Normal</option><option value="112">Large</option><option value="125">Extra large</option></select></div>
+  <details ontoggle="if(this.open)renderLog()"><summary class="text-sm text-gray-300 cursor-pointer">📜 Activity log</summary><div id="logBody" class="mt-2 text-xs text-gray-400 space-y-1"></div></details>
   <details ontoggle="if(this.open)renderDiag()"><summary class="text-sm text-gray-300 cursor-pointer">🩺 Diagnostics</summary><div id="diag" class="mt-2 text-xs text-gray-400 space-y-1"></div><div class="flex gap-2 mt-2"><button class="btn bg-[#0b0c10] border border-white/10 !py-1.5" data-a="refresh">Refresh now</button><button class="btn bg-[#0b0c10] border border-white/10 !py-1.5" data-a="sendNow">Send unsent changes</button></div></details>
   <button class="btn bg-[#0b0c10] border border-white/10 text-sm w-full" data-a="forgetStores">Forget remembered store locations (use if the 📍 button picks the wrong store)</button>
   <div class="flex justify-end gap-2">
@@ -261,7 +291,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
 const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',15),offer:load('offer',70),
- url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[]),light:load('light',false),fs:load('fs',100),beep:load('beep',true),recent:load('recent',[])};
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[]),light:load('light',false),fs:load('fs',100),beep:load('beep',true),recent:load('recent',[]),goal:load('goal',0),allTime:load('allTime',null),log:load('log',[])};
 const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
 let cart=[],hits=[],con='All',formMode='comp';
 
@@ -380,6 +410,7 @@ function renderStock(){
  const rows=all.filter(r=>(stFilter==='All'||(stFilter==='No JAN'?!r.jan:stCat(r)===stFilter))&&(!q||(r.name+' '+r.jan+' '+r.sku+' '+r.type).toLowerCase().includes(q)));
  rows.sort((a,b)=>String(a.purchaseDate).localeCompare(String(b.purchaseDate)));
  if($('stSort').value==='new')rows.reverse();
+ stShown=rows.slice(0,200);
  const st=(l,v,sub,c)=>`<div class="card"><div class="text-xs text-gray-400">${l}</div><div class="text-xl font-extrabold font-mono ${c}">${v}</div><div class="text-xs text-gray-500">${sub}</div></div>`;
  const priced=all.filter(r=>r.raw>0);
  $('stStats').innerHTML=st('Items',all.length,'not yet sold','text-white')
@@ -388,10 +419,10 @@ function renderStock(){
   +st('Est. profit',yen(priced.reduce((t,r)=>t+stProfit(r),0)),'list price x '+S.stockF+' minus cost','text-emerald-300');
  $('stMsg').textContent=(stMsg||(S.stock.length?'':'No STOCK data yet. Check Code.gs is deployed and the tab name is right.'))+salesNote();
  $('stList').innerHTML=rows.length?rows.slice(0,200).map(r=>{const d=stDays(r),p=stProfit(r);
-  return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>${suggestLine(r)}${stageBtn(r)}${stOpen===r.row?stForm(r):''}</div>`}).join('')
+  return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${selMode?`<input type="checkbox" data-sel="${r.row}" ${stSel.has(r.row)?'checked':''} class="mr-2" onclick="event.stopPropagation()">`:''}${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>${suggestLine(r)}${stageBtn(r)}${stOpen===r.row?stForm(r):''}</div>`}).join('')
   :'<div class="text-center text-xs text-gray-500">Nothing matches.</div>';
  fillStoreSelects();
- $('attnCount').textContent='('+attnItems().length+')';$('slowCount').textContent='('+slowItems().length+')';
+ $('attnCount').textContent='('+attnItems().length+')';$('slowCount').textContent='('+slowItems().length+')';$('tqCount').textContent='('+tqList().length+')';
 }
 const maxPay=c=>{const a=net(c)/(1+S.minPct/100),b=S.bigP>0?net(c)-S.bigP:-Infinity;return Math.max(0,Math.floor(Math.min(net(c)-S.minP,Math.max(a,b))))};
 const bandBox=(c,price,i,typed)=>{
@@ -406,7 +437,7 @@ function toast(m,ok=true){const t=$('toast');t.textContent=m;t.style.borderColor
 function setSync(s){$('sync').textContent=s}
 
 // ---- Google Sheet sync (reads with GET, writes with POST) ----
-function post(action,data){rev++;S.queue.push({action,...data,pw:S.pw,qid:Date.now()+'-'+Math.random().toString(36).slice(2)});save();flush()}
+function post(action,data){rev++;const job={action,...data,pw:S.pw,qid:Date.now()+'-'+Math.random().toString(36).slice(2)};S.queue.push(job);logAdd(job);save();flush()}
 function updateRate(){
  if(!S.autoRate||!navigator.onLine||S.rateDate===today())return;
  fetch('https://open.er-api.com/v6/latest/USD').then(r=>r.json()).then(d=>{
@@ -425,7 +456,7 @@ async function flush(){
    catch{await fetch(S.url,{method:'POST',mode:'no-cors',body});r={ok:true}}
    if(r.warn){lastWarn=r.warn;toast('Sheet warning: '+r.warn,false)}
    if(!r.ok){setSync(r.error==='auth'?'Wrong passcode':'Server error');flushing=false;return}
-   S.queue.shift();save();
+   logSet(S.queue[0].qid,r.warn||'');S.queue.shift();save();
   }
  }catch{}
  flushing=false;
@@ -440,6 +471,7 @@ function sync(fresh){
   if(rev!==my||S.queue.length){setSync('Syncing again...');setTimeout(sync,500);return}
   if(d.comps&&d.comps.length)S.comps=d.comps.map(c=>({...c,storePriceJPY:+c.storePriceJPY,lowestJPY:+c.lowestJPY,compUSD:+c.compUSD}));
   if(d.stock){if(d.stock.rows){S.stock=d.stock.rows;stMsg=d.stock.missing&&d.stock.missing.length?'Columns not found in STOCK: '+d.stock.missing.join(', '):''}else stMsg=d.stock.error||''}
+  if(d.allTime)S.allTime=d.allTime;
   if(Array.isArray(d.sales)){S.sales=d.sales;salesMsg=''}else if(d.sales&&d.sales.error)salesMsg=d.sales.error;
   const kept=!d.inv||(d.inv.length===0&&S.inv.length>0);
   if(!kept)S.inv=d.inv.map(c=>({...c,paidJPY:+c.paidJPY,compUSD:+c.compUSD}));
@@ -476,7 +508,7 @@ function search1(){
    ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}
    ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
    ${bandBox(c,lowP(c),i,false)}
-   <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-sky-500 text-white shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
+   <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><button class="btn bg-[#0b0c10] border border-white/10 shrink-0" data-a="padOpen" data-i="px${i}" aria-label="Number pad">🔢</button><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-sky-500 text-white shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
    <button class="btn w-full bg-[#0b0c10] border border-white/10 text-white" data-a="bask" data-i="${i}">＋ Add to basket</button>
    <details><summary class="text-sm text-sky-300 cursor-pointer py-1">More ▾</summary><div class="space-y-2 pt-2">
    ${buyLine(c,i)}
@@ -619,9 +651,9 @@ const A={
   const t=[h.join(','),...S.inv.map(i=>h.map(k=>q(i[k])).join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/csv'}));a.download='rocket-hub-inventory.csv';a.click();
  },
- settings:()=>{$('s_url').value=S.url;$('s_pw').value=S.pw;$('s_auto').checked=S.autoRate;$('s_minp').value=S.minP;$('s_minpct').value=S.minPct;$('s_bigp').value=S.bigP;$('s_sf').value=S.stockF;$('s_light').checked=S.light;$('s_fs').value=String(S.fs);$('s_beep').checked=S.beep;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('setM').classList.toggle('hidden')},
+ settings:()=>{$('s_url').value=S.url;$('s_pw').value=S.pw;$('s_auto').checked=S.autoRate;$('s_minp').value=S.minP;$('s_minpct').value=S.minPct;$('s_bigp').value=S.bigP;$('s_sf').value=S.stockF;$('s_light').checked=S.light;$('s_goal').value=S.goal;$('s_fs').value=String(S.fs);$('s_beep').checked=S.beep;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('setM').classList.toggle('hidden')},
  saveSet:()=>{
-  S.url=$('s_url').value.trim();S.pw=$('s_pw').value;S.autoRate=$('s_auto').checked;if(S.autoRate)S.rateDate='';S.minP=+$('s_minp').value||0;S.minPct=+$('s_minpct').value||0;S.bigP=+$('s_bigp').value||0;S.stockF=+$('s_sf').value||0.8;S.light=$('s_light').checked;S.fs=+$('s_fs').value||100;S.beep=$('s_beep').checked;applyLook();S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||15;S.offer=+$('s_off').value||70;
+  S.url=$('s_url').value.trim();S.pw=$('s_pw').value;S.autoRate=$('s_auto').checked;if(S.autoRate)S.rateDate='';S.minP=+$('s_minp').value||0;S.minPct=+$('s_minpct').value||0;S.bigP=+$('s_bigp').value||0;S.stockF=+$('s_sf').value||0.8;S.light=$('s_light').checked;S.goal=+$('s_goal').value||0;S.fs=+$('s_fs').value||100;S.beep=$('s_beep').checked;applyLook();S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||15;S.offer=+$('s_off').value||70;
   save();$('setM').classList.add('hidden');labels();renderAll();sync();updateRate();toast('Settings saved');
  },
  closeForm:()=>$('formM').classList.add('hidden'),
@@ -721,7 +753,8 @@ A.useSale=i=>{const c=S.comps[i],t=saleStats(c);if(!t)return;
  c.compUSD=t.compUSD;c.compDate=today();
  post('updateLow',{code:c.code,title:c.title,console:c.console,format:c.format,lowestJPY:c.lowestJPY||0,location:c.location||'',compUSD:c.compUSD,compDate:c.compDate});
  save();search1();toast('Comp set to $'+c.compUSD)};
-A.stOpen=r=>{if(!+r)return toast('This item was just added. Reload the app, then open it.',false);stOpen=stOpen===+r?0:+r;renderStock()};
+A.stOpen=r=>{if(selMode){const w=+r;stSel.has(w)?stSel.delete(w):stSel.add(w);renderStock();const sc=$('selCount');if(sc)sc.textContent=stSel.size+' selected';return}
+ if(!+r)return toast('This item was just added. Reload the app, then open it.',false);stOpen=stOpen===+r?0:+r;renderStock()};
 A.stSave=row=>{
  const r=S.stock.find(x=>x.row===+row);if(!r)return;
  const nf={name:$('ed_name').value.trim(),jan:$('ed_jan').value.trim(),rank:$('ed_rank').value,status:$('ed_status').value,location:$('ed_loc').value.trim(),purchase:+$('ed_buy').value||0,raw:+$('ed_raw').value||0};
@@ -779,6 +812,108 @@ function renderGuide(){
  $('guideBody').innerHTML=sec('Most profit per item: consoles (3+ sold)',[...byCon].sort((a,b)=>b.per-a.per).slice(0,4))+sec('Least profit per item: consoles',[...byCon].sort((a,b)=>a.per-b.per).slice(0,2))+(fast?'<div class="text-xs text-gray-400 pt-2">Fastest to sell: consoles</div>'+fast:'')+sec('Best games (2+ sold)',[...byGame].sort((a,b)=>b.per-a.per).slice(0,8))+'<div class="text-xs text-gray-500 pt-2">Based on '+rows.length+' sales that have a purchase price.</div>';
 }
 
+// ---- activity log ----
+const logDesc=j=>({addInv:()=>'Inventory backup add: '+(j.items||[]).map(x=>x.title).join(', '),addComp:()=>'Comps_DB add: '+j.title,updateLow:()=>'Comps_DB update: '+j.title,
+ addStock:()=>'IN STOCK add: '+(j.items||[]).map(x=>x.title).join(', '),updateStock:()=>'IN STOCK edit: '+j.name+' ('+Object.keys(j.fields||{}).join(', ')+')',delInv:()=>'Inventory delete',updateInv:()=>'Inventory update'}[j.action]||(()=>j.action))();
+function logAdd(j){S.log.unshift({id:j.qid,t:Date.now(),d:logDesc(j),s:'waiting'});S.log=S.log.slice(0,100)}
+function logSet(id,w){const x=S.log.find(y=>y.id===id);if(x)x.s=w?'warning: '+w:'sent'}
+function renderLog(){$('logBody').innerHTML=S.log.length?S.log.slice(0,60).map(x=>`<div class="flex justify-between gap-2"><span class="truncate">${esc(new Date(x.t).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}))} ${esc(x.d)}</span><b class="${x.s==='sent'?'text-gray-300':x.s==='waiting'?'text-sky-300':'text-amber-300'} shrink-0">${esc(x.s)}</b></div>`).join(''):'<div>Nothing yet.</div>'}
+
+// ---- basket + keypad ----
+function addBasket(c,v,rank){
+ if(S.basket.some(b=>b.title===c.title&&b.console===c.console&&b.format===c.format)&&!confirm('This is already in your basket. Add another copy?'))return;
+ S.basket.push({code:c.code,title:c.title,console:c.console,format:c.format,rank,compUSD:c.compUSD,price:v});save();renderBasket();toast('Added to basket ('+S.basket.length+')')}
+let padT='',padV='';
+A.padOpen=id=>{padT=id;padV=String($(id).value||'');$('padVal').textContent=padV?Number(padV).toLocaleString():'0';$('padM').classList.remove('hidden')};
+A.padKey=k=>{padV=k==='back'?padV.slice(0,-1):(padV+k).replace(/^0+(?=\d)/,'').slice(0,7);$('padVal').textContent=padV?Number(padV).toLocaleString():'0'};
+A.padOk=()=>{const el=$(padT);if(el){el.value=padV;el.dispatchEvent(new Event('input',{bubbles:true}))}$('padM').classList.add('hidden')};
+A.padCancel=()=>$('padM').classList.add('hidden');
+
+// ---- shelf scan ----
+let shelf=[];
+const shComp=x=>S.comps.find(c=>c.format===x.format&&c.console===x.console&&c.title===x.title&&c.code===x.code);
+const verdict=(c,price)=>{if(!c.compUSD)return {t:'NO COMP'};const mx=maxPay(c);if(!(price>0))return {t:'?',max:mx};
+ const p=net(c)-price,roi=p/price*100;return {t:(p>=S.minP&&(roi>=S.minPct||(S.bigP>0&&p>=S.bigP)))?'BUY':'SKIP',max:mx}};
+const shBadge=(c,price,k)=>{const v=verdict(c,price),cls=v.t==='BUY'?'bg-emerald-500/30 text-emerald-300':v.t==='SKIP'?'bg-red-500/30 text-red-300':'bg-white/10 text-gray-300';
+ return `<span id="sbd${k}" class="px-2 py-0.5 rounded-lg text-sm font-extrabold ${cls}">${v.t}</span>`};
+function renderShelf(){
+ shelf=shelf.filter(shComp);
+ $('shelfBox').classList.toggle('hidden',!shelf.length);$('shCount').textContent='('+shelf.length+')';
+ $('shelfList').innerHTML=shelf.map((x,k)=>{const c=shComp(x);
+  return `<div class="rounded-xl bg-[#0b0c10] p-2 space-y-1"><div class="flex justify-between gap-2"><div class="min-w-0"><div class="text-white text-sm truncate">${esc(c.title)}</div><div class="text-xs text-gray-500">${esc(c.console)} | ${esc(c.format)}${c.compUSD?'':' | no comp'}</div></div>${shBadge(c,lowP(c),k)}</div><div class="flex items-center gap-2"><span class="text-xs text-gray-400 shrink-0">Pay up to <b class="text-white">${c.compUSD?yen(maxPay(c)):'-'}</b></span><input id="spx${k}" data-spx="${k}" type="number" inputmode="numeric" placeholder="shelf ¥" class="inp !py-1.5 !w-24"><button class="btn bg-[#0b0c10] border border-white/10 !py-1.5 shrink-0" data-a="padOpen" data-i="spx${k}">🔢</button><button class="btn bg-sky-500 text-white !py-1.5 shrink-0" data-a="sbask" data-i="${k}">＋ Basket</button></div></div>`}).join('');
+ $('shelfMini').innerHTML=shelf.slice(0,4).map(x=>{const c=shComp(x),v=verdict(c,lowP(c));
+  return `<div class="flex justify-between gap-2 text-gray-200"><span class="truncate">${esc(c.title)} <span class="text-gray-500 text-xs">${esc(c.format)}</span></span><b class="${v.t==='BUY'?'text-emerald-300':v.t==='SKIP'?'text-red-300':'text-gray-400'} shrink-0">${v.t}${v.max?' up to '+yen(v.max):''}</b></div>`}).join('');
+}
+document.addEventListener('input',e=>{const k=e.target.dataset.spx;if(k===undefined)return;const c=shComp(shelf[k]),v=+e.target.value;if(c)$('sbd'+k).outerHTML=shBadge(c,v>0?v:lowP(c),k)});
+A.shelf=()=>openScan(v=>{
+ const ms=S.comps.filter(c=>c.code===v);
+ if(!ms.length){$('scanInfo').textContent='Not in database: '+v;return}
+ ms.forEach(c=>{const key={code:c.code,format:c.format,console:c.console,title:c.title};shelf=[key,...shelf.filter(x=>!(x.code===c.code&&x.format===c.format&&x.console===c.console&&x.title===c.title))]});
+ shelf=shelf.slice(0,40);renderShelf();
+ const c=ms[0],vd=verdict(c,lowP(c));$('scanInfo').textContent=(vd.t==='?'?'':vd.t+': ')+c.title+(vd.max?' | pay up to '+yen(vd.max):'');
+},true);
+A.sbask=k=>{const c=shComp(shelf[k]);if(!c)return;const el=$('spx'+k),v=+(el&&el.value)||lowP(c);
+ if(!(v>0)){toast('Type the shelf price first',false);if(el)el.focus();return}addBasket(c,v,c.rank||'B')};
+A.shClear=()=>{shelf=[];renderShelf()};
+
+// ---- test queue ----
+let tqIdx=0,tqLast=null;
+const tqList=()=>S.stock.filter(r=>!stSold(r)&&r.row&&norm(r.status)==='need to test').sort((a,b)=>String(a.purchaseDate).localeCompare(String(b.purchaseDate)));
+function renderTest(){
+ const l=tqList();$('tqCount').textContent='('+l.length+')';
+ if($('testM').classList.contains('hidden'))return;
+ if(!l.length){$('tItem').innerHTML='<div class="text-center text-gray-400 py-6">Nothing left to test 🎉</div>';$('tProg').textContent='';return}
+ tqIdx=Math.min(tqIdx,l.length-1);const r=l[tqIdx],d=daysSince(r.purchaseDate);
+ $('tProg').textContent=(tqIdx+1)+' of '+l.length;
+ $('tItem').innerHTML=`<div class="text-white text-lg font-semibold">${esc(r.name)}</div><div class="text-sm text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.rank?' | rank '+esc(r.rank):''}</div><div class="text-xs text-gray-500">${r.location?esc(r.location)+' | ':''}waiting ${d===null?'?':d} days${r.jan?' | '+esc(r.jan):''}</div>`}
+A.testOpen=()=>{tqIdx=0;$('testM').classList.remove('hidden');renderTest()};
+A.testClose=()=>{$('testM').classList.add('hidden');renderStock()};
+A.testSkip=()=>{tqIdx++;if(tqIdx>=tqList().length)tqIdx=0;renderTest()};
+A.testSet=st=>{const r=tqList()[tqIdx];if(!r)return;tqLast={row:r.row,prev:r.status};r.status=st;
+ post('updateStock',{row:r.row,name:r.name,fields:{status:st}});save();renderTest();toast(r.name+' → '+st)};
+A.testUndo=()=>{if(!tqLast)return;const r=S.stock.find(x=>x.row===tqLast.row);
+ if(r){r.status=tqLast.prev;post('updateStock',{row:r.row,name:r.name,fields:{status:tqLast.prev}});save()}tqLast=null;renderTest()};
+
+// ---- bulk status change ----
+let selMode=false,stSel=new Set(),stShown=[];
+A.selToggle=()=>{selMode=!selMode;stSel.clear();const b=$('stBar');b.classList.toggle('hidden',!selMode);
+ if(selMode)b.innerHTML='<span id="selCount">0 selected</span><select id="bulkStatus" class="inp !w-auto">'+ST_STATUS.filter(x=>x!=='Shipped').map(x=>'<option>'+x+'</option>').join('')+'</select><button class="btn bg-sky-500 text-white !py-1.5" data-a="bulkApply">Move</button><button class="btn bg-[#0b0c10] border border-white/10 !py-1.5" data-a="selAll">Select all shown</button>';
+ renderStock()};
+A.selAll=()=>{stShown.forEach(r=>stSel.add(r.row));renderStock();$('selCount').textContent=stSel.size+' selected'};
+document.addEventListener('change',e=>{const k=e.target.dataset.sel;if(k===undefined)return;const w=+k;e.target.checked?stSel.add(w):stSel.delete(w);$('selCount').textContent=stSel.size+' selected'});
+A.bulkApply=()=>{const st=$('bulkStatus').value;if(!stSel.size)return toast('Nothing selected',false);
+ let n=0;stSel.forEach(w=>{const r=S.stock.find(x=>x.row===w);if(r&&r.status!==st){post('updateStock',{row:r.row,name:r.name,fields:{status:st}});r.status=st;n++}});
+ stSel.clear();selMode=false;$('stBar').classList.add('hidden');save();renderStock();toast('Moved '+n+' items to '+st)};
+
+// ---- comp refresh list ----
+function renderRefresh(){
+ const cnt={},add=(n,f,t)=>{const k=norm(n)+'|'+f+'|'+typeNorm(t);cnt[k]=(cnt[k]||0)+1};
+ S.stock.forEach(r=>add(r.name,r.format,r.type));S.sales.forEach(x=>add(x.name,x.format,x.type));
+ const need=c=>!c.compUSD||!c.compDate||daysSince(c.compDate)>180;
+ const l=S.comps.map((c,i)=>({c,i,n:cnt[norm(c.title)+'|'+c.format+'|'+norm(c.console)]||0})).filter(x=>x.n>0&&need(x.c)).sort((a,b)=>b.n-a.n).slice(0,25);
+ $('rfCount').textContent='('+l.length+(l.length===25?'+':'')+')';
+ $('rfBody').innerHTML=l.length?l.map(({c,i,n})=>`<div class="bg-[#0b0c10] rounded-xl p-2 space-y-1"><div class="text-white">${esc(c.title)}</div><div class="text-xs text-gray-400">${esc(c.console)} | ${esc(c.format)} | in your history ${n}x | ${c.compUSD?'comp $'+c.compUSD+(c.compDate?' ('+daysSince(c.compDate)+' days old)':' (no date)'):'no comp'}</div><div class="flex items-center gap-2"><input id="rf${i}" type="number" step="0.01" inputmode="decimal" placeholder="new comp $" class="inp !py-1.5 !w-28"><button class="btn bg-sky-500 text-white !py-1.5" data-a="rfSave" data-i="${i}">Save</button><a class="text-xs text-sky-300 underline" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold</a></div></div>`).join(''):'<div class="text-xs text-gray-500">Every comp you actually buy or sell is up to date.</div>';
+}
+A.rfSave=i=>{const c=S.comps[i],v=+$('rf'+i).value;if(!(v>0))return toast('Type the new comp',false);
+ c.compUSD=v;c.compDate=today();
+ post('updateLow',{code:c.code,title:c.title,console:c.console,format:c.format,lowestJPY:c.lowestJPY||0,location:'',compUSD:v,compDate:c.compDate});
+ save();renderRefresh();search1();toast('Comp saved: $'+v)};
+
+// ---- money tied up + profit chart ----
+function renderTied(){
+ const g={};S.stock.filter(r=>!stSold(r)).forEach(r=>{const k=stCat(r),o=g[k]=g[k]||{n:0,cost:0};o.n++;o.cost+=r.purchase});
+ const order=[...ST_STATUS,'Other'].filter(k=>g[k]),max=Math.max(1,...order.map(k=>g[k].cost));
+ $('tiedBody').innerHTML=order.map(k=>`<div><div class="flex justify-between"><span>${esc(k)} <span class="text-gray-500 text-xs">${g[k].n} items</span></span><b class="text-white">${yen(g[k].cost)}</b></div><div class="h-1.5 bg-white/10 rounded"><div class="h-1.5 bg-sky-500 rounded" style="width:${Math.round(g[k].cost/max*100)}%"></div></div></div>`).join('')+'<div class="text-xs text-gray-500 pt-1">Purchase cost of items not yet sold.</div>';
+}
+function profitChart(){
+ const now=new Date(),mon=[];for(let k=11;k>=0;k--){const d=new Date(now.getFullYear(),now.getMonth()-k,1);mon.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'))}
+ const val=mon.map(m=>S.sales.filter(x=>String(x.saleDate).startsWith(m)).reduce((t,x)=>t+x.net-(x.purchase||0),0));
+ const goal=S.goal||0,max=Math.max(1,...val,goal),min=Math.min(0,...val),rg=max-min,W=320,H=120,bw=W/12,y=v=>8+(max-v)/rg*(H-26);
+ const bars=val.map((v,i)=>`<rect x="${i*bw+4}" y="${Math.min(y(v),y(0))}" width="${bw-8}" height="${Math.max(1,Math.abs(y(v)-y(0)))}" fill="${v>=0?'#34d399':'#f87171'}" rx="2"/><text x="${i*bw+bw/2}" y="${H-4}" font-size="8" text-anchor="middle" fill="#9aa1b2">${mon[i].slice(5)}</text>`).join('');
+ const gl=goal>0?`<line x1="0" x2="${W}" y1="${y(goal)}" y2="${y(goal)}" stroke="#38bdf8" stroke-dasharray="4 3"/><text x="${W-2}" y="${y(goal)-3}" font-size="8" text-anchor="end" fill="#38bdf8">goal ${yen(goal)}</text>`:'';
+ return `<div class="text-xs text-gray-400">Profit by month (last 12)</div><svg viewBox="0 0 ${W} ${H}" class="w-full">${bars}${gl}</svg>`;
+}
+
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
  const m=Math.floor((Date.now()-lastSyncT)/60000);el.textContent=m<1?'updated just now':m<60?'updated '+m+' min ago':'updated '+Math.floor(m/60)+' h ago'}
@@ -808,8 +943,7 @@ function renderBasket(){
 document.addEventListener('change',e=>{const k=e.target.dataset.bpx;if(k===undefined)return;S.basket[k].price=Math.max(0,+e.target.value||0);save();renderBasket()});
 A.bask=i=>{const c=S.comps[i],el=$('px'+i),v=+(el&&el.value)||lowP(c);
  if(!(v>0)){toast('Type the shelf price first',false);if(el)el.focus();return}
- S.basket.push({code:c.code,title:c.title,console:c.console,format:c.format,rank:$('rk'+i).value,compUSD:c.compUSD,price:v});
- save();renderBasket();toast('Added to basket ('+S.basket.length+')')};
+ addBasket(c,v,$('rk'+i).value)};
 A.bRm=k=>{S.basket.splice(k,1);save();renderBasket()};
 A.bClear=()=>{if(confirm('Empty the basket?')){S.basket=[];save();renderBasket()}};
 A.buyAll=()=>{
@@ -822,6 +956,7 @@ A.buyAll=()=>{
 };
 
 function renderProfit(){
+ $('pmChart').innerHTML=profitChart();$('pmAll').innerHTML=S.allTime?'All-time (from your SALES tab): sales <b class="text-white">'+yen(S.allTime.sales)+'</b> | profit <b class="text-emerald-300">'+yen(S.allTime.profit)+'</b>':'';
  const m=$('pmSel').value||today().slice(0,7),rows=S.sales.filter(x=>String(x.saleDate).startsWith(m));
  if(!rows.length){$('pmBody').innerHTML='<div class="text-xs text-gray-500">No sales recorded in this month.</div>';return}
  const kept=rows.reduce((t,x)=>t+x.net,0),cost=rows.reduce((t,x)=>t+(x.purchase||0),0),profit=kept-cost,nop=rows.filter(x=>!x.purchase).length;
@@ -916,7 +1051,7 @@ $('fSt').addEventListener('change',renderInv);$('mSel').addEventListener('change
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('lowM').classList.add('hidden');$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
 
 function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1'+(S.autoRate?' (auto)':'');$('offLbl').textContent='('+S.offer+'% of net after '+S.fee+'% fee)'}
-function renderAll(){pills();search1();search2();renderCart();renderInv();renderWatch();renderStock();renderBasket();renderRecent()}
+function renderAll(){pills();search1();search2();renderCart();renderInv();renderWatch();renderStock();renderBasket();renderRecent();renderShelf()}
 
 CON.forEach(c=>{['f_con','fCon'].forEach(id=>{const o=document.createElement('option');o.value=o.textContent=c;$(id).appendChild(o)})});
 $('mSel').value=today().slice(0,7);$('pmSel').value=today().slice(0,7);$('pmSel').addEventListener('change',renderProfit);
