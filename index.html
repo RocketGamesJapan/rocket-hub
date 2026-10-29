@@ -226,6 +226,16 @@ body.light .pill{color:#374151}
  </div>
 </div>
 
+<div id="unkM" class="fixed inset-0 z-[60] hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-8">
+ <div class="font-bold text-white">Unknown barcode</div>
+ <div class="text-sm text-gray-400">This barcode isn't in your comps or STOCK. Type the game title, then add it to the review list.</div>
+ <div id="unk_code" class="text-xs font-mono text-sky-300"></div>
+ <div><label class="lbl">Game title</label><input id="unk_title" class="inp" autocomplete="off"></div>
+ <div id="unkSug" class="hidden rounded-xl border border-white/10 divide-y divide-white/10 overflow-hidden"></div>
+ <div class="grid grid-cols-2 gap-2"><div><label class="lbl">Console</label><select id="unk_con" class="inp"></select></div><div><label class="lbl">Condition</label><select id="unk_fmt" class="inp"><option>CIB</option><option>Loose</option></select></div></div>
+ <div class="grid grid-cols-2 gap-2"><div><label class="lbl">Shelf price (¥)</label><input id="unk_price" type="number" inputmode="numeric" class="inp"></div><div><label class="lbl">Comp ($, optional)</label><input id="unk_comp" type="number" step="0.01" inputmode="decimal" class="inp"></div></div>
+ <label class="flex items-center gap-2 text-sm text-gray-300"><input id="unk_save" type="checkbox" checked> Also save to my comps database</label>
+ <div class="flex justify-end gap-2"><button class="btn bg-[#0b0c10]" data-a="unkSkip">Skip</button><button class="btn bg-sky-500 text-white" data-a="unkSave">Add to review list</button></div></div></div>
 <div id="padM" class="fixed inset-0 z-50 hidden bg-black/80 p-4"><div class="card max-w-xs mx-auto mt-16 space-y-3">
  <div class="text-center text-sm text-gray-400">Shelf price (¥)</div>
  <div id="padVal" class="text-center text-4xl font-extrabold text-white font-mono min-h-[3rem]">0</div>
@@ -862,7 +872,9 @@ A.padCancel=()=>$('padM').classList.add('hidden');
 
 // ---- shelf scan ----
 let shelf=[];
-const shComp=x=>S.comps.find(c=>c.format===x.format&&c.console===x.console&&c.title===x.title&&c.code===x.code);
+let shExtra=[],unkCode='',unkOpen=false,unkList=[],lastUnk={con:'',fmt:'CIB'};
+const shSame=x=>c=>c.format===x.format&&c.console===x.console&&c.title===x.title&&c.code===x.code;
+const shComp=x=>S.comps.find(shSame(x))||shExtra.find(shSame(x));
 const verdict=(c,price)=>{if(!c.compUSD)return {t:'NO COMP'};const mx=maxPay(c);if(!(price>0))return {t:'?',max:mx};
  const p=net(c)-price,roi=p/price*100;return {t:(p>=S.minP&&(roi>=S.minPct||(S.bigP>0&&p>=S.bigP)))?'BUY':'SKIP',max:mx}};
 const shBadge=(c,price,k)=>{const v=verdict(c,price),cls=v.t==='BUY'?'bg-emerald-500/30 text-emerald-300':v.t==='SKIP'?'bg-red-500/30 text-red-300':'bg-white/10 text-gray-300';
@@ -877,8 +889,9 @@ function renderShelf(){
 }
 document.addEventListener('input',e=>{const k=e.target.dataset.spx;if(k===undefined)return;const c=shComp(shelf[k]),v=+e.target.value;if(c)$('sbd'+k).outerHTML=shBadge(c,v>0?v:lowP(c),k)});
 A.shelf=()=>openScan(v=>{
+ if(unkOpen)return;
  const ms=S.comps.filter(c=>c.code===v||codeKey(c.code)===codeKey(v));
- if(!ms.length){$('scanInfo').textContent='Not in database: '+v;return}
+ if(!ms.length){$('scanInfo').textContent='Unknown barcode - type the game title';openUnknown(v);return}
  ms.forEach(c=>{const key={code:c.code,format:c.format,console:c.console,title:c.title};shelf=[key,...shelf.filter(x=>!(x.code===c.code&&x.format===c.format&&x.console===c.console&&x.title===c.title))]});
  shelf=shelf.slice(0,40);renderShelf();
  const c=ms[0],vd=verdict(c,lowP(c));$('scanInfo').textContent=(vd.t==='?'?'':vd.t+': ')+c.title+(vd.max?' | pay up to '+yen(vd.max):'');
@@ -1000,6 +1013,48 @@ const stCompact=(r,d)=>`<div class="card !p-2"><div data-a="stOpen" data-i="${r.
 A.compact=()=>{S.compact=!S.compact;save();renderStock()};
 document.addEventListener('change',e=>{const k=e.target.dataset.cond;if(k===undefined)return;const c=cart[k];c.cond=e.target.value;if(!c.manual)c.offer=defOffer(c);renderCart()});
 $('lotRound').addEventListener('change',renderCart);
+// ---- unknown barcode during a shelf scan ----
+function openUnknown(v){
+ unkCode=v;unkOpen=true;$('unk_code').textContent='Barcode: '+v;
+ $('unk_title').value='';$('unk_price').value='';$('unk_comp').value='';$('unk_save').checked=true;
+ const sel=$('unk_con');sel.innerHTML=CON.map(c=>`<option>${esc(c)}</option>`).join('');if(lastUnk.con)sel.value=lastUnk.con;
+ $('unk_fmt').value=lastUnk.fmt;$('unkSug').classList.add('hidden');
+ $('unkM').classList.remove('hidden');$('unk_title').focus();
+}
+function closeUnk(){unkOpen=false;$('unkM').classList.add('hidden')}
+function showUnkSug(){
+ const q=$('unk_title').value.trim(),b=$('unkSug');
+ if(q.length<2){b.classList.add('hidden');return}
+ unkList=sugSearch(q,'title').slice(0,4);
+ if(!unkList.length){b.classList.add('hidden');return}
+ b.innerHTML=unkList.map((x,i)=>`<button class="block w-full text-left px-3 py-2" data-a="unkPick" data-i="${i}"><div class="text-white text-sm">${esc(x.title)}</div><div class="text-xs text-gray-400">${esc(x.console)} | ${esc(x.format||'-')} | ${x.code?esc(x.code):'no JAN'} | ${x.src}</div></button>`).join('');
+ b.classList.remove('hidden');
+}
+$('unk_title').addEventListener('input',showUnkSug);
+A.unkPick=i=>{const x=unkList[i];if(!x)return;
+ $('unk_title').value=x.title;
+ if(x.console){const sel=$('unk_con');if(![...sel.options].some(o=>o.value===x.console)){const o=document.createElement('option');o.value=o.textContent=x.console;sel.appendChild(o)}sel.value=x.console}
+ if(x.format==='CIB'||x.format==='Loose')$('unk_fmt').value=x.format;
+ $('unkSug').classList.add('hidden')};
+A.unkSkip=()=>{closeUnk()};
+A.unkSave=()=>{
+ const title=$('unk_title').value.trim();if(!title)return toast('Type the game title',false);
+ const con=$('unk_con').value,fmt=$('unk_fmt').value,price=+$('unk_price').value||0,comp=+$('unk_comp').value||0;
+ lastUnk={con,fmt};
+ let c=S.comps.find(x=>x.console===con&&x.format===fmt&&norm(x.title)===norm(title));
+ if(c){fillMissing({title,code:unkCode,console:con,format:fmt,compUSD:comp})}
+ else{
+  const loc=(Date.now()-here.t<6e5&&here.name)||S.loc||'';
+  c={code:unkCode,title,console:con,format:fmt,rank:'',compUSD:comp,storePriceJPY:price,lowestJPY:price,location:loc,compDate:comp?today():''};
+  if($('unk_save').checked){S.comps.unshift(c);post('addComp',c)}else shExtra.push(c);
+ }
+ const key={code:c.code,format:c.format,console:c.console,title:c.title};
+ shelf=[key,...shelf.filter(x=>!(x.code===key.code&&x.format===key.format&&x.console===key.console&&x.title===key.title))].slice(0,40);
+ save();renderShelf();
+ if(price>0){const el=$('spx0');if(el){el.value=price;el.dispatchEvent(new Event('input',{bubbles:true}))}}
+ closeUnk();toast('Added to the review list');
+};
+
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
  const m=Math.floor((Date.now()-lastSyncT)/60000);el.textContent=m<1?'updated just now':m<60?'updated '+m+' min ago':'updated '+Math.floor(m/60)+' h ago'}
