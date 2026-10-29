@@ -111,6 +111,7 @@ body.light .pill{color:#374151}
    <button class="btn text-red-400 noprint" data-a="clear">Clear</button>
   </div>
   <div id="cart" class="space-y-2"></div>
+  <div class="noprint flex flex-wrap items-center gap-2 text-xs text-gray-400">Round the lot down to the nearest <select id="lotRound" class="inp !w-auto !py-1.5"><option value="0">no rounding</option><option value="10">¥10</option><option value="100">¥100</option><option value="500">¥500</option><option value="1000">¥1,000</option></select><span id="lotSum"></span></div>
   <div class="flex flex-wrap justify-between items-center gap-3 border-t border-white/10 pt-3">
    <div class="text-sm"><span class="text-gray-400">Total offer<span class="hidden print:inline"> 合計買取額</span></span> <b id="tPay" class="text-sky-300 text-xl ml-1">¥0</b>
     <span class="np ml-4 text-gray-400">Est. profit <b id="tProfit" class="text-emerald-300">¥0</b></span></div>
@@ -147,7 +148,7 @@ body.light .pill{color:#374151}
  </div>
 </section>
 <section id="t4" class="space-y-4 hidden">
- <div class="flex gap-2"><button class="btn bg-sky-500 text-white flex-1" data-a="testOpen">🧪 Test queue <span id="tqCount"></span></button><button class="btn bg-[#0b0c10] border border-white/10 text-white" data-a="selToggle">☑ Select</button></div>
+ <div class="flex gap-2"><button class="btn bg-sky-500 text-white flex-1" data-a="testOpen">🧪 Test queue <span id="tqCount"></span></button><button class="btn bg-[#0b0c10] border border-white/10 text-white" data-a="selToggle">☑ Select</button><button class="btn bg-[#0b0c10] border border-white/10 text-white" data-a="compact" aria-label="Compact list">▤</button></div>
  <div id="stStats" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
  <details class="card" ontoggle="if(this.open)renderProfit()"><summary class="font-bold text-white cursor-pointer">📊 Monthly profit</summary><div class="mt-3 space-y-3"><div id="pmAll" class="text-sm"></div><div id="pmChart"></div><input id="pmSel" type="month" class="inp !w-auto"><div id="pmBody"></div></div></details>
  <details class="card" ontoggle="if(this.open)renderFix()"><summary class="font-bold text-white cursor-pointer">🔧 Fix-up list <span id="fxCount" class="text-gray-400 font-normal"></span></summary><div id="fxBody" class="mt-3 space-y-2 text-sm"></div></details>
@@ -157,7 +158,7 @@ body.light .pill{color:#374151}
  <details class="card" ontoggle="if(this.open)renderRefresh()"><summary class="font-bold text-white cursor-pointer">🔄 Comp refresh list <span id="rfCount" class="text-gray-400 font-normal"></span></summary><div id="rfBody" class="mt-3 space-y-2 text-sm"></div></details>
  <details class="card" ontoggle="if(this.open)renderTied()"><summary class="font-bold text-white cursor-pointer">💰 Money tied up</summary><div id="tiedBody" class="mt-3 space-y-2 text-sm"></div></details>
  <div class="card space-y-3">
-  <div class="flex gap-2"><input id="stQ" class="inp" placeholder="Search your STOCK sheet (name, JAN, SKU, console)"><select id="stSort" class="inp !w-auto"><option value="old">Oldest first</option><option value="new">Newest first</option></select></div>
+  <div class="flex gap-2"><input id="stQ" class="inp" placeholder="Search your STOCK sheet (name, JAN, SKU, console)"><button class="btn bg-sky-500 text-white shrink-0" data-a="scan" data-i="stQ" aria-label="Scan barcode">📷</button><select id="stSort" class="inp !w-auto"><option value="old">Oldest first</option><option value="new">Newest first</option></select></div>
   <div id="stPills" class="flex gap-2 overflow-x-auto pb-1"></div>
   <div id="stMsg" class="text-xs text-amber-300"></div>
   <div id="stBar" class="hidden flex flex-wrap items-center gap-2 text-sm"></div>
@@ -214,6 +215,7 @@ body.light .pill{color:#374151}
    <div id="locBox"><label id="f_locLbl" class="lbl">Bought at</label><div class="flex gap-2"><input id="f_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><select class="inp !w-24 shrink-0" data-store="f_loc"><option value="">Stores</option></select><button class="btn bg-sky-500 text-white" data-a="gps" data-i="f_loc" aria-label="Find my location">📍</button></div>
     <datalist id="stores"><option>Book Off Iikura</option><option>Book Off Notame</option><option>Hard Off Kasuga Shirouzu</option><option>Hard Off Nakama</option><option>Hard Off Outlets</option><option>Hard Off Yahatanishi</option><option>Manga Soukou Airport</option><option>Manga Soukou Costco</option><option>Manga Soukou Iizuka</option><option>Manga Soukou Kaizuka</option><option>Manga Soukou Tsukiguma</option><option>Mercari</option><option>Willy</option><option>Yahoo Auction</option><option>Yahoo Flea Market</option></datalist></div>
   </div>
+  <div id="notesBox"><label class="lbl">Notes (optional)</label><input id="f_notes" class="inp" placeholder="e.g. box damaged, disc scratched"></div>
   <button class="text-sm text-sky-300 text-left" data-a="fe">Check eBay sold listings for this title ↗</button>
   <div id="saveCompBox" class="hidden"><label class="flex items-center gap-2 text-sm text-gray-300"><input id="f_saveComp" type="checkbox" checked> Also save to comps database for next time</label></div>
   <div id="f_margin" class="text-sm text-gray-400"></div>
@@ -232,6 +234,7 @@ body.light .pill{color:#374151}
 <div id="testM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-8">
  <div class="flex justify-between"><div class="font-bold text-white">🧪 Test queue</div><div id="tProg" class="text-xs text-gray-400"></div></div>
  <div id="tItem"></div>
+ <input id="t_note" class="inp" placeholder="Note (optional), e.g. disc scratched">
  <div class="grid grid-cols-2 gap-2">
   <button class="btn bg-sky-500 text-white py-3" data-a="testSet" data-i="Need photos">✅ Works</button>
   <button class="btn bg-[#0b0c10] border border-white/10 text-white py-3" data-a="testSet" data-i="Need to buy box">📦 Needs box</button>
@@ -293,13 +296,21 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
 const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',15),offer:load('offer',70),
- url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[]),light:load('light',false),fs:load('fs',100),beep:load('beep',true),recent:load('recent',[]),goal:load('goal',0),allTime:load('allTime',null),log:load('log',[])};
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[]),light:load('light',false),fs:load('fs',100),beep:load('beep',true),recent:load('recent',[]),goal:load('goal',0),allTime:load('allTime',null),log:load('log',[]),compact:load('compact',false)};
 const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
 let cart=[],hits=[],con='All',formMode='comp';
 
 const net=i=>i.compUSD*S.rate*(1-S.fee/100);
-const defOffer=i=>Math.round(net(i)*S.offer/100);
+const RANK_MULT={S:1,A:1,B:0.9,C:0.75,D:0.5};
+const defOffer=i=>Math.round(net(i)*S.offer/100*(RANK_MULT[i.cond]??1)/10)*10;
 const byTitle=(a,b)=>S.comps[a].title.localeCompare(S.comps[b].title,undefined,{numeric:true,sensitivity:'base'});
+const codeKey=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const dl1=(a,b)=>{const la=a.length,lb=b.length;if(!la||!lb||Math.abs(la-lb)>1)return false;
+ if(la===lb){const d=[];for(let i=0;i<la;i++)if(a[i]!==b[i])d.push(i);return d.length<=1||(d.length===2&&d[1]===d[0]+1&&a[d[0]]===b[d[1]]&&a[d[1]]===b[d[0]])}
+ const[s1,l1]=la<lb?[a,b]:[b,a];let i=0;while(i<s1.length&&s1[i]===l1[i])i++;return s1.slice(i)===l1.slice(i+1)};
+const compHit=(c,q)=>{if((c.title+' '+c.code).toLowerCase().includes(q))return true;const k=codeKey(q);return k.length>=3&&codeKey(c.code).includes(k)};
+const stHit=(r,q)=>{if((r.name+' '+r.jan+' '+r.sku+' '+r.type+' '+(r.notes||'')).toLowerCase().includes(q))return true;
+ const k=codeKey(q);return k.length>=3&&(codeKey(r.jan).includes(k)||codeKey(r.sku).includes(k)||(k.length>=5&&!/\s/.test(q)&&(dl1(codeKey(r.jan),k)||dl1(codeKey(r.sku),k))))};
 const lowP=c=>c.lowestJPY||c.storePriceJPY||0;
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const ebay=c=>'https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent([c.title,c.format,'Japan'].filter(Boolean).join(' '))+'&LH_Sold=1&LH_Complete=1';
@@ -324,9 +335,9 @@ const PHOTO_TYPES=['Figure','Manga','Pokemon Cards','Yugioh','Guide Book','TCG',
 const stockType=c=>TYPE_MAP[c]||c;
 function toStock(items){
  if(!S.url)return '';
- const rows=items.map(i=>{const t=stockType(i.console);return {title:i.title,code:i.code||'',console:i.console,type:t,format:i.format,rank:i.rank,paidJPY:i.paidJPY,location:i.location,date:i.date||today(),status:PHOTO_TYPES.includes(t)?'Need photos':'Need to test'}});
+ const rows=items.map(i=>{const t=stockType(i.console);return {title:i.title,code:i.code||'',console:i.console,type:t,format:i.format,rank:i.rank,paidJPY:i.paidJPY,location:i.location,date:i.date||today(),notes:i.notes||'',status:PHOTO_TYPES.includes(t)?'Need photos':'Need to test'}});
  post('addStock',{items:rows});
- rows.forEach(x=>S.stock.push({name:x.title,sku:'',format:x.format,type:x.type,purchase:x.paidJPY,raw:0,status:x.status,purchaseDate:x.date,saleDate:'',location:x.location,jan:x.code,rank:x.rank}));
+ rows.forEach(x=>S.stock.push({name:x.title,sku:'',format:x.format,type:x.type,purchase:x.paidJPY,raw:0,status:x.status,purchaseDate:x.date,saleDate:'',location:x.location,jan:x.code,rank:x.rank,notes:x.notes}));
  return 'added to STOCK sheet';
 }
 const buyStats=c=>{
@@ -399,6 +410,7 @@ const stForm=r=>`<div class="mt-3 pt-3 border-t border-white/10 space-y-2">
   <div><label class="lbl">Status</label><select id="ed_status" class="inp">${statusOpts(r)}</select></div>
   <div><label class="lbl">Location</label><div class="flex gap-2"><input id="ed_loc" list="stores" class="inp" value="${esc(r.location)}"><select class="inp !w-24 shrink-0" data-store="ed_loc"><option value="">Stores</option></select></div></div>
  </div>
+ <div><label class="lbl">Notes</label><input id="ed_notes" class="inp" value="${esc(r.notes||'')}" placeholder="e.g. box damaged, disc scratched"></div>
  <div class="grid grid-cols-2 gap-2">
   <div><label class="lbl">Purchase price ¥</label><input id="ed_buy" type="number" class="inp" value="${r.purchase||''}"></div>
   <div><label class="lbl">List price ¥ (Raw Price)</label><input id="ed_raw" type="number" class="inp" value="${r.raw||''}"></div>
@@ -409,7 +421,7 @@ function renderStock(){
  const all=S.stock.filter(r=>!stSold(r)),q=$('stQ').value.trim().toLowerCase();
  $('stPills').innerHTML=['All','No JAN',...ST_STATUS,'Other'].map(c=>{const n=c==='All'?all.length:c==='No JAN'?all.filter(r=>!r.jan).length:all.filter(r=>stCat(r)===c).length;
   return n?`<button class="pill ${c===stFilter?'on':''}" data-a="stf" data-i="${esc(c)}">${esc(c)} ${n}</button>`:''}).join('');
- const rows=all.filter(r=>(stFilter==='All'||(stFilter==='No JAN'?!r.jan:stCat(r)===stFilter))&&(!q||(r.name+' '+r.jan+' '+r.sku+' '+r.type).toLowerCase().includes(q)));
+ const rows=all.filter(r=>(stFilter==='All'||(stFilter==='No JAN'?!r.jan:stCat(r)===stFilter))&&(!q||stHit(r,q)));
  rows.sort((a,b)=>String(a.purchaseDate).localeCompare(String(b.purchaseDate)));
  if($('stSort').value==='new')rows.reverse();
  stShown=rows.slice(0,200);
@@ -420,8 +432,8 @@ function renderStock(){
   +st('List value',yen(priced.reduce((t,r)=>t+r.raw,0)),priced.length+' priced','text-sky-300')
   +st('Est. profit',yen(priced.reduce((t,r)=>t+stProfit(r),0)),'list price x '+S.stockF+' minus cost','text-emerald-300');
  $('stMsg').textContent=(stMsg||(S.stock.length?'':'No STOCK data yet. Check Code.gs is deployed and the tab name is right.'))+salesNote();
- $('stList').innerHTML=rows.length?rows.slice(0,200).map(r=>{const d=stDays(r),p=stProfit(r);
-  return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${selMode?`<input type="checkbox" data-sel="${r.row}" ${stSel.has(r.row)?'checked':''} class="mr-2" onclick="event.stopPropagation()">`:''}${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div></div>${suggestLine(r)}${stageBtn(r)}${stOpen===r.row?stForm(r):''}</div>`}).join('')
+ $('stList').innerHTML=rows.length?rows.slice(0,200).map(r=>{const d=stDays(r),p=stProfit(r);if(S.compact)return stCompact(r,d);
+  return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${selMode?`<input type="checkbox" data-sel="${r.row}" ${stSel.has(r.row)?'checked':''} class="mr-2" onclick="event.stopPropagation()">`:''}${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div>${r.notes?`<div class="text-xs text-amber-300 mt-1">📝 ${esc(r.notes)}</div>`:''}</div>${suggestLine(r)}${stageBtn(r)}${stOpen===r.row?stForm(r):''}</div>`}).join('')
   :'<div class="text-center text-xs text-gray-500">Nothing matches.</div>';
  fillStoreSelects();
  $('attnCount').textContent='('+attnItems().length+')';$('slowCount').textContent='('+slowItems().length+')';$('tqCount').textContent='('+tqList().length+')';
@@ -489,7 +501,9 @@ function search1(){
  const q=$('q1').value.trim().toLowerCase();
  if(!q){hits=[];$('count').textContent='';$('watchBanner').classList.add('hidden');$('ownBanner').classList.add('hidden');
   $('grid').innerHTML='<div class="sm:col-span-2 lg:col-span-3 text-center text-sm text-gray-500 py-10">Scan a barcode or type a title or code to look up an item.</div>';return}
- const all=S.comps.map((c,i)=>i).filter(i=>{const c=S.comps[i];return(con==='All'||c.console===con)&&(!q||(c.title+' '+c.code).toLowerCase().includes(q))});
+ const all=S.comps.map((c,i)=>i).filter(i=>{const c=S.comps[i];return(con==='All'||c.console===con)&&(!q||compHit(c,q))});
+ let fz=false;
+ if(!all.length&&q&&!/\s/.test(q)&&codeKey(q).length>=5){const k=codeKey(q);S.comps.forEach((c,i)=>{if((con==='All'||c.console===con)&&c.code&&dl1(codeKey(c.code),k))all.push(i)});fz=all.length>0}
  all.sort(byTitle);
  hits=all.slice(0,60);
  const w=hits.filter(i=>isW(S.comps[i]));
@@ -500,7 +514,7 @@ function search1(){
  const ow=hits.filter(i=>ownN(S.comps[i]).length);
  $('ownBanner').classList.toggle('hidden',!ow.length||hits.length>3);
  $('ownBanner').textContent='📦 YOU ALREADY HAVE: '+ow.map(i=>{const c=S.comps[i];return c.title+' ('+c.format+') x'+ownN(c).length}).join(', ');
- $('count').textContent=all.length+' in comps database'+(all.length>60?' (showing first 60, search or pick a console to narrow)':'');
+ $('count').textContent=all.length+' in comps database'+(fz?' (close matches - check the code you typed)':'')+(all.length>60?' (showing first 60, search or pick a console to narrow)':'');
  $('grid').innerHTML=hits.length?hits.map(i=>{
   const c=S.comps[i],p=net(c)-lowP(c);
   return `<div class="card space-y-3 flex flex-col justify-between ${isW(c)?'ring-2 ring-yellow-300':''}">
@@ -532,20 +546,29 @@ function search1(){
 function search2(){
  const q=$('q2').value.trim().toLowerCase();
  if(!q){$('res2').innerHTML='<div class="text-xs text-gray-500">Type a title or code to see the offer.</div>';return}
- const m=S.comps.map((c,i)=>i).filter(i=>(S.comps[i].title+' '+S.comps[i].code).toLowerCase().includes(q)).sort(byTitle).slice(0,20);
+ let m=S.comps.map((c,i)=>i).filter(i=>compHit(S.comps[i],q)).sort(byTitle).slice(0,20);
+ if(!m.length&&!/\s/.test(q)&&codeKey(q).length>=5){const k=codeKey(q);m=S.comps.map((c,i)=>i).filter(i=>S.comps[i].code&&dl1(codeKey(S.comps[i].code),k)).slice(0,20)}
  $('res2').innerHTML=m.length?m.map(i=>{const c=S.comps[i];return `<div class="flex items-center justify-between gap-3 bg-[#0b0c10] rounded-xl p-3">
   <div><div class="text-white text-sm font-semibold">${esc(c.title)} <span class="text-gray-400 font-normal">(${esc(c.console)}, ${esc(c.format)})</span></div>
   <div class="text-xs text-gray-400">${esc(c.code)} | comp $${c.compUSD} | offer <b class="text-sky-300">${yen(defOffer(c))}</b></div></div>
   <button class="btn bg-sky-500 text-white shrink-0" data-a="toCart" data-i="${i}">Add</button></div>`}).join('')
  :'<div class="text-xs text-red-400">No match in the comps database.</div>';
 }
+function lotAlloc(){
+ const sum=cart.reduce((t,c)=>t+c.offer,0),step=+(($('lotRound')||{}).value)||0,lot=step?Math.floor(sum/step)*step:sum;
+ if(lot>=sum||sum===0)return {lot:sum,fin:cart.map(c=>c.offer),sum};
+ const fin=cart.map(c=>Math.floor(c.offer*lot/sum/10)*10);let diff=lot-fin.reduce((a,b)=>a+b,0);
+ if(diff>0&&fin.length){let m=0;cart.forEach((c,i)=>{if(c.offer>cart[m].offer)m=i});fin[m]+=diff}
+ return {lot,fin,sum};
+}
 function renderCart(){
  $('badge').textContent=cart.length;$('badge').classList.toggle('hidden',!cart.length);
- let pay=0,prof=0;
- $('cart').innerHTML=cart.length?cart.map((c,i)=>{pay+=c.offer;const p=net(c)-c.offer;prof+=p;
-  return `<div class="rounded-xl bg-[#0b0c10] p-3 space-y-2"><div class="flex justify-between gap-2"><div><div class="text-white font-semibold">${esc(c.title)}</div><div class="text-xs text-gray-500">${esc(c.console)} | ${esc(c.format)}${c.code?' | '+esc(c.code):''}</div></div><button class="text-red-400 text-xl noprint" data-a="rm" data-i="${i}" aria-label="Remove">✕</button></div><div class="grid grid-cols-2 gap-2"><div class="np"><label class="lbl">eBay comp ($)</label><input type="number" min="0" step="0.01" value="${c.compUSD||''}" placeholder="?" data-comp="${i}" class="inp font-mono"></div><div><label class="lbl">Offer (¥)<span class="hidden print:inline"> 買取額</span></label><input type="number" min="0" value="${c.offer}" data-offer="${i}" class="inp font-mono text-sky-300"></div></div><div class="np flex justify-between text-xs"><a class="text-sky-300" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold</a><span class="${p>=0?'text-emerald-300':'text-red-400'}">Profit ${yen(p)}</span></div></div>`}).join('')
+ const al=lotAlloc();let prof=0;
+ $('cart').innerHTML=cart.length?cart.map((c,i)=>{const p=net(c)-al.fin[i];prof+=p;
+  return `<div class="rounded-xl bg-[#0b0c10] p-3 space-y-2"><div class="flex justify-between gap-2"><div><div class="text-white font-semibold">${esc(c.title)}</div><div class="text-xs text-gray-500">${esc(c.console)} | ${esc(c.format)}${c.code?' | '+esc(c.code):''}</div></div><button class="text-red-400 text-xl noprint" data-a="rm" data-i="${i}" aria-label="Remove">✕</button></div><div class="grid grid-cols-3 gap-2"><div class="np"><label class="lbl">Comp ($)</label><input type="number" min="0" step="0.01" value="${c.compUSD||''}" placeholder="?" data-comp="${i}" class="inp font-mono"></div><div class="np"><label class="lbl">Condition</label><select data-cond="${i}" class="inp">${['','S','A','B','C','D'].map(x=>`<option value="${x}" ${x===(c.cond||'')?'selected':''}>${x||'-'}</option>`).join('')}</select></div><div><label class="lbl">Offer (¥)<span class="hidden print:inline"> 買取額</span></label><input type="number" min="0" value="${c.offer}" data-offer="${i}" class="inp font-mono text-sky-300 print:hidden"><div class="hidden print:block font-mono text-lg">${yen(al.fin[i])}</div></div></div>${al.fin[i]!==c.offer?'<div class="np text-xs text-gray-400">After lot rounding: '+yen(al.fin[i])+'</div>':''}<div class="np flex justify-between text-xs"><a class="text-sky-300" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold</a><span class="${p>=0?'text-emerald-300':'text-red-400'}">Profit ${yen(p)}</span></div></div>`}).join('')
   :'<div class="text-center text-gray-500 text-xs py-3">No items yet. Add items from Stock lookup or search above.</div>';
- $('tPay').textContent=yen(pay);$('tProfit').textContent=yen(prof);
+ $('tPay').textContent=yen(al.lot);$('tProfit').textContent=yen(prof);
+ $('lotSum').textContent=al.lot<al.sum?'(items add up to '+yen(al.sum)+')':'';
 }
 
 // ---- Tab 3 ----
@@ -583,10 +606,10 @@ function openForm(mode,item){
  $('formTitle').textContent=mode==='comp'?'Add to comps database':mode==='cart'?'Add item to offer list':'Add to my inventory';
  $('f_priceLbl').textContent=mode==='comp'?'Shop price (JPY)':'Price paid (JPY)';
  $('f_locLbl').textContent=mode==='comp'?'Seen at':'Bought at';
- $('locBox').classList.toggle('hidden',mode==='cart');$('priceBox').classList.toggle('hidden',mode==='cart');$('saveCompBox').classList.toggle('hidden',mode!=='cart');
+ $('locBox').classList.toggle('hidden',mode==='cart');$('priceBox').classList.toggle('hidden',mode==='cart');$('saveCompBox').classList.toggle('hidden',mode!=='cart');$('notesBox').classList.toggle('hidden',mode!=='inv');$('f_notes').value='';
  $('f_title').value=item?.title||'';$('f_code').value=item?.code||'';
  $('f_con').value=item?.console||CON[0];
- $('f_price').value=(item&&lowP(item))||1000;$('f_comp').value=item?.compUSD??'';
+ $('f_price').value=(item&&lowP(item))||'';$('f_comp').value=item?.compUSD??'';
  $('f_fmt').value=item?.format||'CIB';$('f_rank').value=item?.rank||'B';$('f_loc').value='';
  margin();$('formM').classList.remove('hidden');$('f_title').focus();if(mode!=='cart')autoLoc('f_loc');fillStoreSelects();
  hideSug();if(!(item&&item.title)){if($('f_code').value&&!$('f_title').value)showSug('code');else if($('f_title').value.trim().length>1)showSug('title')}
@@ -598,7 +621,7 @@ function margin(){
 }
 function saveForm(){buyNote='';
  const o={title:$('f_title').value.trim(),code:$('f_code').value.trim().toUpperCase(),console:$('f_con').value,
-  format:$('f_fmt').value,rank:$('f_rank').value,compUSD:+$('f_comp').value||0};
+  format:$('f_fmt').value,rank:$('f_rank').value,compUSD:+$('f_comp').value||0,notes:$('f_notes').value.trim()};
  if(!o.title)return toast('Enter a title',false);
  if(formMode==='cart'){
   o.storePriceJPY=0;o.lowestJPY=0;
@@ -609,6 +632,7 @@ function saveForm(){buyNote='';
   $('formM').classList.add('hidden');toast('Added '+o.title+' to offer list');return;
  }
  const price=+$('f_price').value||0,loc=$('f_loc').value.trim();
+ if(formMode==='inv'&&!(price>0))return toast('Enter the price you paid',false);
  if(formMode==='comp'){
   o.storePriceJPY=price;o.lowestJPY=price;o.location=loc;o.compDate=o.compUSD?today():'';
   const k=S.comps.findIndex(c=>c.console===o.console&&c.format===o.format&&(o.code?c.code===o.code:c.title===o.title));
@@ -643,9 +667,12 @@ const A={
  accept:()=>{
   if(!cart.length)return toast('Offer list is empty',false);
   const d=today();
-  const items=cart.map((c,k)=>({id:'INV-'+Date.now()+'-'+k,code:c.code,title:c.title,console:c.console,paidJPY:c.offer,format:c.format,rank:c.rank,compUSD:c.compUSD,location:'Customer trade-in',date:d}));
+  const known=cart.map((c,k)=>({c,k})).filter(x=>!x.c.unknown);
+  if(known.length<cart.length&&!confirm((cart.length-known.length)+' line(s) are not in the database and will not be added to stock. Continue?'))return;
+  const al=lotAlloc();
+  const items=known.map(({c,k})=>({id:'INV-'+Date.now()+'-'+k,code:c.code,title:c.title,console:c.console,paidJPY:al.fin[k],format:c.format,rank:c.cond||c.rank||'B',compUSD:c.compUSD,location:'Customer trade-in',date:d}));
   S.inv.unshift(...items);post('addInv',{items});toStock(items);save();
-  toast('Added '+items.length+' items to inventory');cart=[];renderCart();showTab('t3');
+  toast('Added '+items.length+' items to inventory');cart=[];renderCart();showTab('t4');
  },
  del:id=>{if(!confirm('Delete this item from inventory?'))return;S.inv=S.inv.filter(i=>i.id!==id);post('delInv',{id});save();renderInv()},
  csv:()=>{
@@ -680,6 +707,7 @@ function closeScan(){
 A.scan=t=>openScan(v=>{
  if(t==='q1'){$('q1').value=v;con='All';pills();window._sc=1;search1();addRecent(v);if(hits.length===1){const e=$('px'+hits[0]);if(e)e.focus()}}
  else if(t==='q2'){$('q2').value=v;search2()}
+ else if(t==='stQ'){$('stQ').value=v;stFilter='All';renderStock();if(stShown.length===1){stOpen=stShown[0].row;renderStock();$('stList').scrollIntoView({behavior:'smooth'})}}
  else{$(t).value=v;if(t==='f_code')showSug('code')}
  toast('Scanned '+v);
 });
@@ -718,9 +746,9 @@ function rememberStore(name){
 ['f_loc','low_loc'].forEach(id=>$(id).addEventListener('input',e=>e.target.dataset.touched='1'));
 A.gps=id=>autoLoc(id,true);
 A.multi=()=>openScan(v=>{
- const c=S.comps.find(x=>x.code===v);
+ const c=S.comps.find(x=>x.code===v||codeKey(x.code)===codeKey(v));
  if(c){cart.push({...c,offer:defOffer(c)});renderCart();$('scanInfo').textContent=(ownN(c).length?'📦 YOU HAVE '+ownN(c).length+' ALREADY. ':'')+(isW(c)?'★ WATCHLIST'+(watchOf(c).max?' (under '+yen(watchOf(c).max)+')':'')+': ':'')+'Added: '+c.title+' ('+cart.length+' on list)'}
- else $('scanInfo').textContent='Not in database: '+v+' (add it by hand afterwards)';
+ else{cart.push({code:v,title:'Not in database ('+v+')',console:'?',format:'?',compUSD:0,offer:0,manual:true,unknown:true});renderCart();$('scanInfo').textContent='Not in database: '+v+' - added as a line you can price by hand'}
 },true);
 function renderWatch(){
  $('wCount').textContent='('+S.watch.length+')';
@@ -759,8 +787,8 @@ A.useSale=i=>{const c=S.comps[i],t=saleStats(c);if(!t)return;
 A.stOpen=r=>{if(selMode){const w=+r;stSel.has(w)?stSel.delete(w):stSel.add(w);renderStock();const sc=$('selCount');if(sc)sc.textContent=stSel.size+' selected';return}
  if(!+r)return toast('This item was just added. Reload the app, then open it.',false);stOpen=stOpen===+r?0:+r;renderStock()};
 A.stSave=row=>{
- const r=S.stock.find(x=>x.row===+row);if(!r)return;
- const nf={name:$('ed_name').value.trim(),jan:$('ed_jan').value.trim(),rank:$('ed_rank').value,status:$('ed_status').value,location:$('ed_loc').value.trim(),purchase:+$('ed_buy').value||0,raw:+$('ed_raw').value||0};
+ const r=S.stock.find(x=>x.row===+row);if(!r)return;r.notes=r.notes||'';
+ const nf={name:$('ed_name').value.trim(),jan:$('ed_jan').value.trim(),rank:$('ed_rank').value,status:$('ed_status').value,location:$('ed_loc').value.trim(),purchase:+$('ed_buy').value||0,raw:+$('ed_raw').value||0,notes:$('ed_notes').value.trim()};
  if(!nf.name)return toast('Name cannot be empty',false);
  const f={};Object.keys(nf).forEach(k=>{if(nf[k]!==r[k])f[k]=nf[k]});
  if(!Object.keys(f).length){stOpen=0;renderStock();return toast('Nothing changed')}
@@ -849,7 +877,7 @@ function renderShelf(){
 }
 document.addEventListener('input',e=>{const k=e.target.dataset.spx;if(k===undefined)return;const c=shComp(shelf[k]),v=+e.target.value;if(c)$('sbd'+k).outerHTML=shBadge(c,v>0?v:lowP(c),k)});
 A.shelf=()=>openScan(v=>{
- const ms=S.comps.filter(c=>c.code===v);
+ const ms=S.comps.filter(c=>c.code===v||codeKey(c.code)===codeKey(v));
  if(!ms.length){$('scanInfo').textContent='Not in database: '+v;return}
  ms.forEach(c=>{const key={code:c.code,format:c.format,console:c.console,title:c.title};shelf=[key,...shelf.filter(x=>!(x.code===c.code&&x.format===c.format&&x.console===c.console&&x.title===c.title))]});
  shelf=shelf.slice(0,40);renderShelf();
@@ -868,12 +896,13 @@ function renderTest(){
  if(!l.length){$('tItem').innerHTML='<div class="text-center text-gray-400 py-6">Nothing left to test 🎉</div>';$('tProg').textContent='';return}
  tqIdx=Math.min(tqIdx,l.length-1);const r=l[tqIdx],d=daysSince(r.purchaseDate);
  $('tProg').textContent=(tqIdx+1)+' of '+l.length;
- $('tItem').innerHTML=`<div class="text-white text-lg font-semibold">${esc(r.name)}</div><div class="text-sm text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.rank?' | rank '+esc(r.rank):''}</div><div class="text-xs text-gray-500">${r.location?esc(r.location)+' | ':''}waiting ${d===null?'?':d} days${r.jan?' | '+esc(r.jan):''}</div>`}
+ $('tItem').innerHTML=`<div class="text-white text-lg font-semibold">${esc(r.name)}</div><div class="text-sm text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.rank?' | rank '+esc(r.rank):''}</div><div class="text-xs text-gray-500">${r.location?esc(r.location)+' | ':''}waiting ${d===null?'?':d} days${r.jan?' | '+esc(r.jan):''}</div>${r.notes?`<div class="text-xs text-amber-300">📝 ${esc(r.notes)}</div>`:''}`}
 A.testOpen=()=>{tqIdx=0;$('testM').classList.remove('hidden');renderTest()};
 A.testClose=()=>{$('testM').classList.add('hidden');renderStock()};
 A.testSkip=()=>{tqIdx++;if(tqIdx>=tqList().length)tqIdx=0;renderTest()};
 A.testSet=st=>{const r=tqList()[tqIdx];if(!r)return;tqLast={row:r.row,prev:r.status};r.status=st;
- post('updateStock',{row:r.row,name:r.name,fields:{status:st}});save();renderTest();toast(r.name+' → '+st)};
+ const f={status:st},note=$('t_note').value.trim();if(note){f.notes=(r.notes?r.notes+'; ':'')+note;r.notes=f.notes;$('t_note').value=''}
+ post('updateStock',{row:r.row,name:r.name,fields:f});save();renderTest();toast(r.name+' → '+st)};
 A.testUndo=()=>{if(!tqLast)return;const r=S.stock.find(x=>x.row===tqLast.row);
  if(r){r.status=tqLast.prev;post('updateStock',{row:r.row,name:r.name,fields:{status:tqLast.prev}});save()}tqLast=null;renderTest()};
 
@@ -922,13 +951,16 @@ let sugList=[];
 const REV=Object.fromEntries(Object.entries(TYPE_MAP).map(([k,v])=>[norm(v),k]));
 const appConsole=t=>{const r=REV[norm(t)]||t;return CON.find(c=>norm(c)===norm(r))||r};
 function sugSearch(q,field){
- const n=norm(q),code=q.trim(),out=[],idx={},cand=[];
- const score=(title,jan)=>{if(field==='code')return jan&&jan===code?0:(jan&&jan.includes(code)?1:9);
+ const n=norm(q),k=codeKey(q),out=[],idx={},cand=[];
+ const score=(title,jan)=>{if(field==='code'){const jk=codeKey(jan);return jan&&jk===k?0:(jan&&jk.includes(k)?1:9)}
   const t=norm(title);return t===n?0:t.startsWith(n)?1:t.includes(n)?2:n.split(/\s+/).every(w=>t.includes(w))?3:9};
  S.comps.forEach(c=>{const s=score(c.title,c.code);if(s<9)cand.push({s,x:{title:c.title,code:c.code,console:c.console,format:c.format,src:'Comps'}})});
  S.stock.forEach(r=>{const s=score(r.name,r.jan);if(s<9)cand.push({s:s+0.5,x:{title:r.name,code:r.jan,console:appConsole(r.type),format:r.format==='New'?'':r.format,src:'STOCK'}})});
  cand.sort((a,b)=>a.s-b.s).forEach(({x})=>{const k=norm(x.title)+'|'+norm(x.console)+'|'+x.format;
   if(idx[k]){if(!idx[k].code&&x.code)idx[k].code=x.code;return}idx[k]=x;out.push(x)});
+ if(field==='code'&&!out.length&&k.length>=5){
+  S.comps.forEach(c=>{if(c.code&&dl1(codeKey(c.code),k))out.push({title:c.title,code:c.code,console:c.console,format:c.format,src:'Comps (close match)'})});
+  S.stock.forEach(r=>{if(r.jan&&dl1(codeKey(r.jan),k))out.push({title:r.name,code:r.jan,console:appConsole(r.type),format:r.format==='New'?'':r.format,src:'STOCK (close match)'})})}
  return out.slice(0,6);
 }
 function showSug(field){
@@ -963,6 +995,11 @@ function fillMissing(o){
  return notes.join(', ');
 }
 
+const stageMini=r=>{const n=NEXT[norm(r.status)];return n&&r.row?`<button class="text-xs text-sky-300 underline mt-1" data-a="stage" data-i="${r.row}">→ ${n}</button>`:''};
+const stCompact=(r,d)=>`<div class="card !p-2"><div data-a="stOpen" data-i="${r.row}" class="flex items-center gap-2 text-sm cursor-pointer">${selMode?`<input type="checkbox" data-sel="${r.row}" ${stSel.has(r.row)?'checked':''} onclick="event.stopPropagation()">`:''}<span class="text-white truncate flex-1">${esc(r.name)}${r.notes?' 📝':''}</span><span class="text-xs text-gray-400 shrink-0">${esc(r.type)}</span><span class="text-xs text-sky-300 shrink-0 max-w-[6rem] truncate">${esc(r.status||'-')}</span><span class="text-xs shrink-0 ${d>60?'text-amber-300':'text-gray-500'}">${d===''?'':d+'d'}</span></div>${stageMini(r)}${stOpen===r.row?stForm(r):''}</div>`;
+A.compact=()=>{S.compact=!S.compact;save();renderStock()};
+document.addEventListener('change',e=>{const k=e.target.dataset.cond;if(k===undefined)return;const c=cart[k];c.cond=e.target.value;if(!c.manual)c.offer=defOffer(c);renderCart()});
+$('lotRound').addEventListener('change',renderCart);
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
  const m=Math.floor((Date.now()-lastSyncT)/60000);el.textContent=m<1?'updated just now':m<60?'updated '+m+' min ago':'updated '+Math.floor(m/60)+' h ago'}
