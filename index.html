@@ -157,6 +157,7 @@ body.light .pill{color:#374151}
  <details class="card" ontoggle="if(this.open)renderGuide()"><summary class="font-bold text-white cursor-pointer">🎯 Buying guide</summary><div id="guideBody" class="mt-3 space-y-2 text-sm"></div></details>
  <details class="card" ontoggle="if(this.open)renderRefresh()"><summary class="font-bold text-white cursor-pointer">🔄 Comp refresh list <span id="rfCount" class="text-gray-400 font-normal"></span></summary><div id="rfBody" class="mt-3 space-y-2 text-sm"></div></details>
  <details class="card" ontoggle="if(this.open)renderTied()"><summary class="font-bold text-white cursor-pointer">💰 Money tied up</summary><div id="tiedBody" class="mt-3 space-y-2 text-sm"></div></details>
+ <details class="card" ontoggle="if(this.open)renderMissing()"><summary class="font-bold text-white cursor-pointer">📥 Missing from STOCK sheet <span id="msCount" class="text-gray-400 font-normal"></span></summary><div id="msBody" class="mt-3 space-y-2 text-sm"></div></details>
  <div class="card space-y-3">
   <div class="flex gap-2"><input id="stQ" class="inp" placeholder="Search your STOCK sheet (name, JAN, SKU, console)"><button class="btn bg-sky-500 text-white shrink-0" data-a="scan" data-i="stQ" aria-label="Scan barcode">📷</button><select id="stSort" class="inp !w-auto"><option value="old">Oldest first</option><option value="new">Newest first</option></select></div>
   <div id="stPills" class="flex gap-2 overflow-x-auto pb-1"></div>
@@ -446,7 +447,7 @@ function renderStock(){
   return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${selMode?`<input type="checkbox" data-sel="${r.row}" ${stSel.has(r.row)?'checked':''} class="mr-2" onclick="event.stopPropagation()">`:''}${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div>${r.notes?`<div class="text-xs text-amber-300 mt-1">📝 ${esc(r.notes)}</div>`:''}</div>${suggestLine(r)}${stageBtn(r)}${stOpen===r.row?stForm(r):''}</div>`}).join('')
   :'<div class="text-center text-xs text-gray-500">Nothing matches.</div>';
  fillStoreSelects();
- $('attnCount').textContent='('+attnItems().length+')';$('slowCount').textContent='('+slowItems().length+')';$('tqCount').textContent='('+tqList().length+')';
+ $('attnCount').textContent='('+attnItems().length+')';$('slowCount').textContent='('+slowItems().length+')';$('tqCount').textContent='('+tqList().length+')';$('msCount').textContent='('+missingItems().length+')';
 }
 const maxPay=c=>{const a=net(c)/(1+S.minPct/100),b=S.bigP>0?net(c)-S.bigP:-Infinity;return Math.max(0,Math.floor(Math.min(net(c)-S.minP,Math.max(a,b))))};
 const bandBox=(c,price,i,typed)=>{
@@ -475,12 +476,16 @@ async function flush(){
  flushing=true;lastWarn='';
  try{
   while(S.queue.length){
-   const body=JSON.stringify(S.queue[0]);let r;
+   const job=S.queue[0],body=JSON.stringify(job);let r;
    try{r=await(await fetch(S.url,{method:'POST',body})).json()}
-   catch{await fetch(S.url,{method:'POST',mode:'no-cors',body});r={ok:true}}
+   catch(e){
+    job.tries=(job.tries||0)+1;save();
+    if(job.tries<4){flushing=false;setSync('Retrying...');setTimeout(flush,3000*job.tries);return}
+    try{await fetch(S.url,{method:'POST',mode:'no-cors',body});r={ok:true,unconfirmed:true}}catch(e2){flushing=false;setSync('Offline - will retry');return}
+   }
    if(r.warn){lastWarn=r.warn;toast('Sheet warning: '+r.warn,false)}
    if(!r.ok){setSync(r.error==='auth'?'Wrong passcode':'Server error');flushing=false;return}
-   logSet(S.queue[0].qid,r.warn||'');S.queue.shift();save();
+   logSet(job.qid,r.warn||'',r.unconfirmed);S.queue.shift();save();
   }
  }catch{}
  flushing=false;
@@ -857,7 +862,7 @@ function renderGuide(){
 const logDesc=j=>({addInv:()=>'Inventory backup add: '+(j.items||[]).map(x=>x.title).join(', '),addComp:()=>'Comps_DB add: '+j.title,fillComp:()=>'Comps_DB fill: '+j.title,updateLow:()=>'Comps_DB update: '+j.title,
  addStock:()=>'IN STOCK add: '+(j.items||[]).map(x=>x.title).join(', '),updateStock:()=>'IN STOCK edit: '+j.name+' ('+Object.keys(j.fields||{}).join(', ')+')',delInv:()=>'Inventory delete',updateInv:()=>'Inventory update'}[j.action]||(()=>j.action))();
 function logAdd(j){S.log.unshift({id:j.qid,t:Date.now(),d:logDesc(j),s:'waiting'});S.log=S.log.slice(0,100)}
-function logSet(id,w){const x=S.log.find(y=>y.id===id);if(x)x.s=w?'warning: '+w:'sent'}
+function logSet(id,w,u){const x=S.log.find(y=>y.id===id);if(x)x.s=w?'warning: '+w:u?'sent (unconfirmed)':'sent'}
 function renderLog(){$('logBody').innerHTML=S.log.length?S.log.slice(0,60).map(x=>`<div class="flex justify-between gap-2"><span class="truncate">${esc(new Date(x.t).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}))} ${esc(x.d)}</span><b class="${x.s==='sent'?'text-gray-300':x.s==='waiting'?'text-sky-300':'text-amber-300'} shrink-0">${esc(x.s)}</b></div>`).join(''):'<div>Nothing yet.</div>'}
 
 // ---- basket + keypad ----
@@ -1055,6 +1060,25 @@ A.unkSave=()=>{
  closeUnk();toast('Added to the review list');
 };
 
+// ---- items bought in the app that never reached the STOCK sheet ----
+let msList=[];
+function missingItems(){
+ const key=(n,c,f)=>norm(n)+'|'+c+'|'+f,have={};
+ S.stock.forEach(r=>{const k=key(r.name,typeNorm(r.type),r.format);have[k]=(have[k]||0)+1});
+ const since=new Date(Date.now()-30*864e5).toISOString().slice(0,10),out=[];
+ S.inv.filter(i=>String(i.date)>=since&&i.status!=='sold').slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach(i=>{
+  const k=key(i.title,typeNorm(i.console),i.format);if(have[k]>0)have[k]--;else out.push(i)});
+ return out;
+}
+function renderMissing(){
+ msList=missingItems();$('msCount').textContent='('+msList.length+')';
+ $('msBody').innerHTML=msList.length?'<div class="text-xs text-gray-400">Bought in the last 30 days and recorded in your Inventory backup, but no matching row found in IN STOCK. Untick anything that is already there under a different name.</div>'+msList.map((i,k)=>`<label class="flex items-start gap-2 bg-[#0b0c10] rounded-xl p-2"><input type="checkbox" data-ms="${k}" checked class="mt-1"><span class="min-w-0"><span class="block text-white">${esc(i.title)}</span><span class="block text-xs text-gray-400">${esc(i.console)} | ${esc(i.format)} | ${yen(i.paidJPY)} | ${esc(i.date)} | ${esc(i.location||'-')}</span></span></label>`).join('')+'<button class="btn bg-sky-500 text-white w-full" data-a="msSend">Send ticked items to the STOCK sheet</button>'
+  :'<div class="text-xs text-gray-500">Everything bought in the last 30 days is in your STOCK sheet.</div>';
+}
+A.msSend=()=>{const items=[...document.querySelectorAll('#msBody input[data-ms]')].filter(b=>b.checked).map(b=>msList[+b.dataset.ms]).filter(Boolean);
+ if(!items.length)return toast('Nothing ticked',false);
+ toStock(items);renderMissing();renderStock();toast('Sent '+items.length+' item'+(items.length>1?'s':'')+' to the STOCK sheet')};
+
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
  const m=Math.floor((Date.now()-lastSyncT)/60000);el.textContent=m<1?'updated just now':m<60?'updated '+m+' min ago':'updated '+Math.floor(m/60)+' h ago'}
@@ -1091,7 +1115,7 @@ A.buyAll=()=>{
  if(!S.basket.length)return toast('Basket is empty',false);
  const name=(Date.now()-here.t<6e5&&here.name)||S.loc||'Unknown';
  const items=S.basket.map((b,k)=>({id:'INV-'+Date.now()+'-'+k,code:b.code,title:b.title,console:b.console,paidJPY:b.price,format:b.format,rank:b.rank,compUSD:b.compUSD,location:name,date:today(),status:'',soldUSD:'',soldDate:''}));
- S.inv.unshift(...items);post('addInv',{items});items.forEach(i=>{compFromBuy(i);fillMissing(i)});toStock(items);
+ S.inv.unshift(...items);post('addInv',{items});toStock(items);items.forEach(i=>{compFromBuy(i);fillMissing(i)});
  if(here.name&&name===here.name){S.loc=name;rememberStore(name)}
  S.basket=[];save();renderBasket();search1();toast('Added '+items.length+' items to STOCK ('+name+')');
 };
