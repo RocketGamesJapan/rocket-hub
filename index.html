@@ -75,6 +75,7 @@ body.light .pill{color:#374151}
 <section id="t1" class="space-y-4">
  <button class="w-full py-6 rounded-2xl bg-sky-500 text-white text-xl font-extrabold" data-a="scan" data-i="q1">📷 Scan barcode</button>
  <button class="w-full py-3 rounded-2xl bg-[#12131C] border border-sky-400/40 text-sky-300 font-bold" data-a="shelf">📚 Shelf scan (keep scanning, review the list)</button>
+ <button class="w-full py-3 rounded-2xl bg-[#12131C] border border-white/10 text-gray-200 font-bold" data-a="trip">🧾 Trip summary</button>
  <div class="card space-y-3">
   <div class="flex gap-2">
    <input id="q1" class="inp" placeholder="Title, catalog code or JAN barcode" autocomplete="off">
@@ -158,6 +159,7 @@ body.light .pill{color:#374151}
  <details class="card" ontoggle="if(this.open)renderRefresh()"><summary class="font-bold text-white cursor-pointer">🔄 Comp refresh list <span id="rfCount" class="text-gray-400 font-normal"></span></summary><div id="rfBody" class="mt-3 space-y-2 text-sm"></div></details>
  <details class="card" ontoggle="if(this.open)renderTied()"><summary class="font-bold text-white cursor-pointer">💰 Money tied up</summary><div id="tiedBody" class="mt-3 space-y-2 text-sm"></div></details>
  <details class="card" ontoggle="if(this.open)renderMissing()"><summary class="font-bold text-white cursor-pointer">📥 Missing from STOCK sheet <span id="msCount" class="text-gray-400 font-normal"></span></summary><div id="msBody" class="mt-3 space-y-2 text-sm"></div></details>
+ <details class="card" ontoggle="if(this.open)renderDup()"><summary class="font-bold text-white cursor-pointer">🧩 Duplicate finder <span id="dupCount" class="text-gray-400 font-normal"></span></summary><div id="dupBody" class="mt-3 space-y-2 text-sm"></div></details>
  <div class="card space-y-3">
   <div class="flex gap-2"><input id="stQ" class="inp" placeholder="Search your STOCK sheet (name, JAN, SKU, console)"><button class="btn bg-sky-500 text-white shrink-0" data-a="scan" data-i="stQ" aria-label="Scan barcode">📷</button><select id="stSort" class="inp !w-auto"><option value="old">Oldest first</option><option value="new">Newest first</option></select></div>
   <div id="stPills" class="flex gap-2 overflow-x-auto pb-1"></div>
@@ -227,6 +229,10 @@ body.light .pill{color:#374151}
  </div>
 </div>
 
+<div id="tripM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-8">
+ <div class="flex justify-between items-center"><div class="font-bold text-white">🧾 Trip summary</div><input id="tripDate" type="date" class="inp !w-auto !py-1.5"></div>
+ <div id="tripBody" class="space-y-2 text-sm"></div>
+ <div class="flex justify-end gap-2"><button class="btn bg-[#0b0c10]" data-a="tripClose">Close</button><button class="btn bg-sky-500 text-white" data-a="tripShare">Share</button></div></div></div>
 <div id="unkM" class="fixed inset-0 z-[60] hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-8">
  <div class="font-bold text-white">Unknown barcode</div>
  <div class="text-sm text-gray-400">This barcode isn't in your comps or STOCK. Type the game title, then add it to the review list.</div>
@@ -550,6 +556,9 @@ function search1(){
     <button class="btn bg-[#0b0c10] border border-white/10 text-sky-300" data-a="toCart" data-i="${i}">Buy offer</button>
     <button class="btn bg-[#0b0c10] border border-white/10 text-yellow-300 col-span-2" data-a="low" data-i="${i}">Update prices</button>
     <a class="btn text-center bg-[#0b0c10] border border-white/10 text-sky-300 col-span-2" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold listings</a>
+    <div class="col-span-2 grid grid-cols-3 gap-2"><a class="btn text-center text-xs bg-[#0b0c10] border border-white/10 text-sky-300 !px-1" target="_blank" rel="noopener" href="${mercariUrl(c)}">Mercari</a><a class="btn text-center text-xs bg-[#0b0c10] border border-white/10 text-sky-300 !px-1" target="_blank" rel="noopener" href="${yahooUrl(c)}">Yahoo Auctions</a><a class="btn text-center text-xs bg-[#0b0c10] border border-white/10 text-sky-300 !px-1" target="_blank" rel="noopener" href="${surugayaUrl(c)}">Surugaya</a></div>
+    <div class="col-span-2 text-xs text-gray-500">Search: ${esc(jpTerm(c))}${c.jpTitle||hasJp(c.title)?'':' <span class="text-amber-300">(no Japanese title saved)</span>'}</div>
+    <div class="col-span-2 flex gap-2"><input id="jp${i}" class="inp" placeholder="Japanese title (for Mercari)" value="${esc(c.jpTitle||'')}"><button class="btn bg-[#0b0c10] border border-white/10 text-white shrink-0" data-a="jpSave" data-i="${i}">Save</button></div>
    </div></div></details></div>`}).join('')
  :`<div class="card sm:col-span-2 lg:col-span-3 text-center space-y-3"><div class="text-white font-bold">Nothing matches</div>
    <div class="text-xs text-gray-400">Add it to the comps database or straight into your inventory.</div>
@@ -1078,6 +1087,108 @@ function renderMissing(){
 A.msSend=()=>{const items=[...document.querySelectorAll('#msBody input[data-ms]')].filter(b=>b.checked).map(b=>msList[+b.dataset.ms]).filter(Boolean);
  if(!items.length)return toast('Nothing ticked',false);
  toStock(items);renderMissing();renderStock();toast('Sent '+items.length+' item'+(items.length>1?'s':'')+' to the STOCK sheet')};
+
+// ---- Japanese search links ----
+const JPCON={'3ds':'ニンテンドー3DS','dreamcast':'ドリームキャスト','ds':'ニンテンドーDS','famicom':'ファミコン','gba':'ゲームボーイアドバンス','gb':'ゲームボーイ','game boy':'ゲームボーイ','gbc':'ゲームボーイカラー','game boy color':'ゲームボーイカラー',
+ 'gamecube':'ゲームキューブ','megadrive':'メガドライブ','n64':'ニンテンドー64','ps1':'プレイステーション','ps2':'プレイステーション2','psp':'PSP','saturn':'セガサターン','sfc':'スーパーファミコン','super famicom':'スーパーファミコン',
+ 'vita':'PS Vita','wii':'Wii','wii u':'Wii U','switch':'ニンテンドースイッチ','ps5':'PS5','360':'Xbox 360','guide book':'攻略本'};
+const hasJp=t=>/[\u3040-\u30ff\u3400-\u9fff]/.test(String(t||''));
+const jpTerm=c=>(c.jpTitle||c.title)+' '+(JPCON[norm(c.console)]||(c.console==='Toys/Other'?'':c.console));
+const mercariUrl=c=>'https://jp.mercari.com/search?keyword='+encodeURIComponent(jpTerm(c).trim());
+const yahooUrl=c=>'https://auctions.yahoo.co.jp/search/search?p='+encodeURIComponent(jpTerm(c).trim());
+const surugayaUrl=c=>'https://www.suruga-ya.jp/search?category=&search_word='+encodeURIComponent(jpTerm(c).trim());
+A.jpSave=i=>{const c=S.comps[i],v=$('jp'+i).value.trim();c.jpTitle=v;
+ post('setJp',{code:c.code,title:c.title,console:c.console,format:c.format,jpTitle:v});save();search1();toast(v?'Japanese title saved':'Japanese title cleared')};
+
+// ---- duplicate finder ----
+const tkey=t=>String(t||'').normalize('NFKC').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}\p{M}]/gu,'');
+const toks=t=>new Set(String(t||'').normalize('NFKC').toLowerCase().match(/[a-z0-9]+/g)||[]);
+let dupG=[],dupS=[];
+function dupComps(){
+ const groups={},out=[];
+ S.comps.forEach((c,i)=>{const g=typeNorm(c.console)+'|'+c.format;(groups[g]=groups[g]||[]).push(i)});
+ Object.values(groups).forEach(ids=>{
+  if(ids.length<2)return;
+  const parent={},f=x=>{if(parent[x]===undefined)parent[x]=x;return parent[x]===x?x:(parent[x]=f(parent[x]))},u=(a,b)=>{parent[f(a)]=f(b)};
+  const byCode={},byKey={},T={};
+  ids.forEach(i=>{const c=S.comps[i],ck=codeKey(c.code),tk=tkey(c.title);T[i]=toks(c.title);
+   if(ck){if(byCode[ck]!==undefined)u(i,byCode[ck]);else byCode[ck]=i}
+   if(tk){const arr=byKey[tk]=byKey[tk]||[];arr.forEach(j=>{const cj=codeKey(S.comps[j].code);if(!ck||!cj||ck===cj)u(i,j)});arr.push(i)}});
+  ids.filter(i=>!codeKey(S.comps[i].code)&&T[i].size>=2).forEach(i=>ids.forEach(j=>{
+   if(j===i||T[j].size<2)return;let n=0;T[i].forEach(w=>{if(T[j].has(w))n++});if(n/(T[i].size+T[j].size-n)>=0.7)u(i,j)}));
+  const cl={};ids.forEach(i=>{const r=f(i);(cl[r]=cl[r]||[]).push(i)});
+  Object.values(cl).forEach(a=>{if(a.length>1)out.push(a)});
+ });
+ return out;
+}
+function dupStock(){
+ const g={};
+ S.stock.filter(r=>!stSold(r)&&r.row&&tkey(r.name)).forEach(r=>{const k=typeNorm(r.type)+'|'+r.format+'|'+tkey(r.name);(g[k]=g[k]||[]).push(r)});
+ return Object.values(g).filter(a=>new Set(a.map(r=>r.name)).size>1||(a.some(r=>r.jan)&&a.some(r=>!r.jan)));
+}
+function canonName(rows){
+ const r0=rows[0],c=S.comps.find(x=>x.format===r0.format&&typeNorm(x.console)===typeNorm(r0.type)&&tkey(x.title)===tkey(r0.name));
+ const cnt={};rows.forEach(r=>cnt[r.name]=(cnt[r.name]||0)+1);
+ const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0][0],jan=(rows.find(r=>r.jan)||{}).jan||(c&&c.code)||'';
+ return {name:c?c.title:top,jan};
+}
+const dupScore=c=>(codeKey(c.code)?3:0)+(c.compUSD>0?2:0)+(c.compDate?1:0)+(c.lowestJPY>0?1:0)+(c.jpTitle?1:0);
+function renderDup(){
+ dupG=dupComps().slice(0,30);dupS=dupStock().slice(0,30);
+ $('dupCount').textContent='('+(dupG.length+dupS.length)+')';
+ const cH=dupG.map((ids,gi)=>{const best=ids.reduce((a,b)=>dupScore(S.comps[b])>dupScore(S.comps[a])?b:a,ids[0]),c0=S.comps[ids[0]];
+  return `<div class="bg-[#0b0c10] rounded-xl p-2 space-y-1"><div class="text-xs text-gray-400">${esc(c0.console)} | ${esc(c0.format)} - pick the row to keep</div>${ids.map(i=>{const c=S.comps[i];
+   return `<label class="flex items-start gap-2 py-1"><input type="radio" name="dk${gi}" value="${i}" ${i===best?'checked':''} class="mt-1"><span class="min-w-0"><span class="block text-white text-sm">${esc(c.title)}</span><span class="block text-xs text-gray-400">${c.code?esc(c.code):'no JAN'} | comp ${c.compUSD?'$'+c.compUSD:'-'} | lowest ${c.lowestJPY?yen(c.lowestJPY):'-'}${c.location?' | '+esc(c.location):''}</span></span></label>`}).join('')}<button class="btn bg-sky-500 text-white w-full !py-1.5" data-a="dupMerge" data-i="${gi}">Merge into the selected row</button></div>`}).join('');
+ const sH=dupS.map((rows,gi)=>{const cn=canonName(rows);
+  return `<div class="bg-[#0b0c10] rounded-xl p-2 space-y-1"><div class="text-xs text-gray-400">${rows.length} STOCK rows for what looks like one game</div>${rows.map(r=>`<div class="text-sm text-white">${esc(r.name)} <span class="text-xs text-gray-500">${r.jan?esc(r.jan):'no JAN'} | row ${r.row}</span></div>`).join('')}<button class="btn bg-sky-500 text-white w-full !py-1.5" data-a="dupName" data-i="${gi}">Use "${esc(cn.name)}"${cn.jan?' and JAN '+esc(cn.jan):''} on all</button></div>`}).join('');
+ $('dupBody').innerHTML='<div class="text-xs text-gray-400">Comps database</div>'+(cH||'<div class="text-xs text-gray-500">No duplicates found.</div>')+'<div class="text-xs text-gray-400 pt-2">STOCK sheet names</div>'+(sH||'<div class="text-xs text-gray-500">No mismatched names found.</div>');
+}
+function mergeLocal(K,D){
+ if(!K.code&&D.code)K.code=D.code;
+ if(!K.compUSD&&D.compUSD){K.compUSD=D.compUSD;if(D.compDate)K.compDate=D.compDate}
+ if(D.lowestJPY>0&&(!K.lowestJPY||D.lowestJPY<K.lowestJPY)){K.lowestJPY=D.lowestJPY;if(D.location)K.location=D.location}
+ if(!K.storePriceJPY&&D.storePriceJPY)K.storePriceJPY=D.storePriceJPY;
+ if(!K.rank&&D.rank)K.rank=D.rank;if(!K.jpTitle&&D.jpTitle)K.jpTitle=D.jpTitle;
+}
+A.dupMerge=gi=>{const ids=dupG[gi];if(!ids)return;const sel=document.querySelector('input[name=dk'+gi+']:checked');if(!sel)return;
+ const K=S.comps[+sel.value],others=ids.map(i=>S.comps[i]).filter(c=>c!==K);
+ if(!confirm('Keep "'+K.title+'" and remove '+others.length+' other row'+(others.length>1?'s':'')+' from Comps_DB? Missing info (barcode, comp, lowest price) is copied across.'))return;
+ const kj={row:K.row,title:K.title,console:K.console,format:K.format,code:K.code};
+ others.forEach(D=>{post('mergeComps',{keep:kj,del:{row:D.row,title:D.title,console:D.console,format:D.format,code:D.code}});mergeLocal(K,D);S.comps=S.comps.filter(x=>x!==D)});
+ save();renderDup();search1();toast('Merged '+others.length+' row'+(others.length>1?'s':''))};
+A.dupName=gi=>{const rows=dupS[gi];if(!rows)return;const cn=canonName(rows);let n=0;
+ rows.forEach(r=>{const f={};if(r.name!==cn.name)f.name=cn.name;if(!r.jan&&cn.jan)f.jan=cn.jan;
+  if(Object.keys(f).length){post('updateStock',{row:r.row,name:r.name,fields:f});Object.assign(r,f);n++}});
+ save();renderDup();renderStock();toast('Updated '+n+' STOCK row'+(n>1?'s':''))};
+
+// ---- trip summary ----
+function tripData(date){
+ const items=S.inv.filter(i=>String(i.date)===date),by={};let spent=0,prof=0,unpriced=0;
+ items.forEach(i=>{const k=i.location||'Unknown',o=by[k]=by[k]||{n:0,spent:0,profit:0};const p=i.compUSD>0?net(i)-i.paidJPY:null;
+  o.n++;o.spent+=i.paidJPY;spent+=i.paidJPY;if(p===null)unpriced++;else{o.profit+=p;prof+=p}});
+ return {items,spent,prof,unpriced,stores:Object.entries(by).sort((a,b)=>b[1].profit-a[1].profit),
+  best:items.filter(i=>i.compUSD>0).map(i=>({i,p:net(i)-i.paidJPY})).sort((a,b)=>b.p-a.p).slice(0,3)};
+}
+function tripText(date){const d=tripData(date);
+ return 'Rocket Hub trip '+date+'\n'+d.items.length+(d.items.length===1?' item':' items')+' | spent '+yen(d.spent)+' | expected profit '+yen(d.prof)+(d.unpriced?' ('+d.unpriced+' without a comp)':'')
+  +'\n\nBy store:\n'+d.stores.map(([k,o])=>k+': '+o.n+(o.n===1?' item, ':' items, ')+yen(o.spent)+', profit '+yen(o.profit)).join('\n')
+  +(d.best.length?'\n\nBest finds:\n'+d.best.map(x=>x.i.title+' ('+x.i.console+') +'+yen(x.p)).join('\n'):'');}
+function renderTrip(){
+ const date=$('tripDate').value||today(),d=tripData(date);
+ if(!d.items.length){$('tripBody').innerHTML='<div class="text-gray-400 text-center py-6">Nothing bought on '+esc(date)+'.</div>';return}
+ const big=(l,v,c)=>`<div><div class="text-xs text-gray-400">${l}</div><b class="text-lg ${c}">${v}</b></div>`;
+ $('tripBody').innerHTML=`<div class="grid grid-cols-3 gap-2">${big('Items',d.items.length,'text-white')}${big('Spent',yen(d.spent),'text-white')}${big('Expected profit',yen(d.prof),d.prof>=0?'text-emerald-300':'text-red-400')}</div>`
+  +(d.unpriced?`<div class="text-xs text-amber-300">${d.unpriced} item${d.unpriced>1?'s':''} without a comp are not counted in the profit.</div>`:'')
+  +'<div class="text-xs text-gray-400 pt-1">By store (best profit first)</div>'
+  +d.stores.map(([k,o])=>`<div class="flex justify-between gap-2"><span class="truncate">${esc(k)} <span class="text-gray-500 text-xs">${o.n} item${o.n===1?'':'s'}, ${yen(o.spent)}</span></span><b class="${o.profit>=0?'text-emerald-300':'text-red-400'} shrink-0">${yen(o.profit)}</b></div>`).join('')
+  +(d.best.length?'<div class="text-xs text-gray-400 pt-1">Best finds</div>'+d.best.map(x=>`<div class="flex justify-between gap-2"><span class="truncate">${esc(x.i.title)}</span><b class="text-emerald-300 shrink-0">+${yen(x.p)}</b></div>`).join(''):'');
+}
+A.trip=()=>{$('tripDate').value=today();$('tripM').classList.remove('hidden');renderTrip()};
+A.tripClose=()=>$('tripM').classList.add('hidden');
+A.tripShare=()=>{const t=tripText($('tripDate').value||today());
+ if(navigator.share)navigator.share({title:'Rocket Hub trip',text:t}).catch(()=>{});
+ else navigator.clipboard.writeText(t).then(()=>toast('Summary copied'),()=>toast('Could not copy',false))};
+$('tripDate').addEventListener('change',renderTrip);
 
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
