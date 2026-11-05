@@ -176,6 +176,8 @@ body.light .pill{color:#374151}
   <div id="scanBox" class="w-full overflow-hidden rounded-xl"></div>
   <div id="scanInfo" class="text-sm text-sky-300 min-h-[1.5rem]"></div>
   <div id="shelfMini" class="space-y-1 text-sm"></div>
+  <div id="shTools" class="hidden space-y-2"><div class="flex items-center gap-2 text-xs text-gray-400">New items default to <select id="sh_con" class="inp !w-auto !py-1.5"></select><select id="sh_fmt" class="inp !w-auto !py-1.5"><option>CIB</option><option>Loose</option></select></div>
+   <button class="btn w-full bg-[#0b0c10] border border-white/10 text-white" data-a="fdOpen">⌨ No barcode? Find by title or code</button></div>
   <div class="text-xs text-gray-400">Hold the barcode inside the frame. If asked, allow camera access.</div>
   <button class="btn bg-[#0b0c10] border border-white/10" data-a="closeScan">Done</button>
  </div>
@@ -233,10 +235,18 @@ body.light .pill{color:#374151}
  <div class="flex justify-between items-center"><div class="font-bold text-white">🧾 Trip summary</div><input id="tripDate" type="date" class="inp !w-auto !py-1.5"></div>
  <div id="tripBody" class="space-y-2 text-sm"></div>
  <div class="flex justify-end gap-2"><button class="btn bg-[#0b0c10]" data-a="tripClose">Close</button><button class="btn bg-sky-500 text-white" data-a="tripShare">Share</button></div></div></div>
+<div id="findM" class="fixed inset-0 z-[60] hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-8">
+ <div class="font-bold text-white">Find a game without a barcode</div>
+ <input id="fd_q" class="inp" placeholder="Title or product code, e.g. HDR-0159" autocomplete="off">
+ <div class="grid grid-cols-2 gap-2"><select id="fd_con" class="inp"></select><select id="fd_fmt" class="inp"><option value="">Any condition</option><option>CIB</option><option>Loose</option></select></div>
+ <div id="fd_list" class="hidden rounded-xl border border-white/10 divide-y divide-white/10 overflow-hidden"></div>
+ <button class="btn bg-[#0b0c10] border border-white/10 text-white w-full" data-a="fdNew">＋ Not listed: add it as a new game</button>
+ <div class="flex justify-end"><button class="btn bg-[#0b0c10]" data-a="fdClose">Close</button></div></div></div>
 <div id="unkM" class="fixed inset-0 z-[60] hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-8">
  <div class="font-bold text-white">Unknown barcode</div>
  <div class="text-sm text-gray-400">This barcode isn't in your comps or STOCK. Type the game title, then add it to the review list.</div>
  <div id="unk_code" class="text-xs font-mono text-sky-300"></div>
+ <div id="aiBox" class="hidden"><button class="btn bg-[#0b0c10] border border-white/10 text-sky-300 w-full" data-a="aiRead">📷 Read the cover or label with AI</button><input id="aiFile" type="file" accept="image/*" capture="environment" class="hidden"><div id="aiMsg" class="text-xs text-gray-400 mt-1"></div></div>
  <div><label class="lbl">Game title</label><input id="unk_title" class="inp" autocomplete="off"></div>
  <div id="unkSug" class="hidden rounded-xl border border-white/10 divide-y divide-white/10 overflow-hidden"></div>
  <div class="grid grid-cols-2 gap-2"><div><label class="lbl">Console</label><select id="unk_con" class="inp"></select></div><div><label class="lbl">Condition</label><select id="unk_fmt" class="inp"><option>CIB</option><option>Loose</option></select></div></div>
@@ -277,6 +287,10 @@ body.light .pill{color:#374151}
    <div><label class="lbl">Offer % of net</label><input id="s_off" type="number" class="inp"></div>
   </div>
   <div class="grid grid-cols-2 gap-3">
+   <div><label class="lbl">Customer offers are based on</label><select id="s_basis" class="inp"><option value="store">Cheapest store price I've seen</option><option value="ebay">eBay comp (after fees)</option></select></div>
+   <div><label class="lbl">Offer % of store price</label><input id="s_spct" type="number" class="inp"></div>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
    <div><label class="lbl">BUY only if profit is at least ¥</label><input id="s_minp" type="number" class="inp"></div>
    <div><label class="lbl">and at least this % of price</label><input id="s_minpct" type="number" class="inp"></div>
   </div>
@@ -313,13 +327,14 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
 const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',15),offer:load('offer',70),
- url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[]),light:load('light',false),fs:load('fs',100),beep:load('beep',true),recent:load('recent',[]),goal:load('goal',0),allTime:load('allTime',null),log:load('log',[]),compact:load('compact',false)};
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[]),light:load('light',false),fs:load('fs',100),beep:load('beep',true),recent:load('recent',[]),goal:load('goal',0),allTime:load('allTime',null),log:load('log',[]),compact:load('compact',false),offerBasis:load('offerBasis','store'),storePct:load('storePct',100),lastCon:load('lastCon',''),lastFmt:load('lastFmt','CIB')};
 const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
 let cart=[],hits=[],con='All',formMode='comp';
 
 const net=i=>i.compUSD*S.rate*(1-S.fee/100);
 const RANK_MULT={S:1,A:1,B:0.9,C:0.75,D:0.5};
-const defOffer=i=>Math.round(net(i)*S.offer/100*(RANK_MULT[i.cond]??1)/10)*10;
+const offerBase=i=>S.offerBasis==='store'?lowP(i)*S.storePct/100:net(i)*S.offer/100;
+const defOffer=i=>Math.round(offerBase(i)*(RANK_MULT[i.cond]??1)/10)*10;
 const byTitle=(a,b)=>S.comps[a].title.localeCompare(S.comps[b].title,undefined,{numeric:true,sensitivity:'base'});
 const codeKey=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const dl1=(a,b)=>{const la=a.length,lb=b.length;if(!la||!lb||Math.abs(la-lb)>1)return false;
@@ -632,9 +647,9 @@ function openForm(mode,item){
  $('f_locLbl').textContent=mode==='comp'?'Seen at':'Bought at';
  $('locBox').classList.toggle('hidden',mode==='cart');$('priceBox').classList.toggle('hidden',mode==='cart');$('saveCompBox').classList.toggle('hidden',mode!=='cart');$('notesBox').classList.toggle('hidden',mode!=='inv');$('f_notes').value='';
  $('f_title').value=item?.title||'';$('f_code').value=item?.code||'';
- $('f_con').value=item?.console||CON[0];
+ setConsole(item?.console||S.lastCon||CON[0]);
  $('f_price').value=(item&&lowP(item))||'';$('f_comp').value=item?.compUSD??'';
- $('f_fmt').value=item?.format||'CIB';$('f_rank').value=item?.rank||'B';$('f_loc').value='';
+ $('f_fmt').value=item?.format||S.lastFmt||'CIB';$('f_rank').value=item?.rank||'B';$('f_loc').value='';
  margin();$('formM').classList.remove('hidden');$('f_title').focus();if(mode!=='cart')autoLoc('f_loc');fillStoreSelects();
  hideSug();if(!(item&&item.title)){if($('f_code').value&&!$('f_title').value)showSug('code');else if($('f_title').value.trim().length>1)showSug('title')}
 }
@@ -647,6 +662,7 @@ function saveForm(){buyNote='';
  const o={title:$('f_title').value.trim(),code:$('f_code').value.trim().toUpperCase(),console:$('f_con').value,
   format:$('f_fmt').value,rank:$('f_rank').value,compUSD:+$('f_comp').value||0,notes:$('f_notes').value.trim()};
  if(!o.title)return toast('Enter a title',false);
+ S.lastCon=o.console;S.lastFmt=o.format;
  if(formMode==='cart'){
   o.storePriceJPY=0;o.lowestJPY=0;
   if($('f_saveComp').checked&&!S.comps.some(c=>c.console===o.console&&c.format===o.format&&(o.code?c.code===o.code:c.title===o.title))){
@@ -705,9 +721,9 @@ const A={
   const t=[h.join(','),...S.inv.map(i=>h.map(k=>q(i[k])).join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/csv'}));a.download='rocket-hub-inventory.csv';a.click();
  },
- settings:()=>{$('s_url').value=S.url;$('s_pw').value=S.pw;$('s_auto').checked=S.autoRate;$('s_minp').value=S.minP;$('s_minpct').value=S.minPct;$('s_bigp').value=S.bigP;$('s_sf').value=S.stockF;$('s_light').checked=S.light;$('s_goal').value=S.goal;$('s_fs').value=String(S.fs);$('s_beep').checked=S.beep;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('setM').classList.toggle('hidden')},
+ settings:()=>{$('s_url').value=S.url;$('s_pw').value=S.pw;$('s_auto').checked=S.autoRate;$('s_minp').value=S.minP;$('s_minpct').value=S.minPct;$('s_bigp').value=S.bigP;$('s_sf').value=S.stockF;$('s_light').checked=S.light;$('s_goal').value=S.goal;$('s_fs').value=String(S.fs);$('s_beep').checked=S.beep;$('s_rate').value=S.rate;$('s_fee').value=S.fee;$('s_off').value=S.offer;$('s_basis').value=S.offerBasis;$('s_spct').value=S.storePct;$('setM').classList.toggle('hidden')},
  saveSet:()=>{
-  S.url=$('s_url').value.trim();S.pw=$('s_pw').value;S.autoRate=$('s_auto').checked;if(S.autoRate)S.rateDate='';S.minP=+$('s_minp').value||0;S.minPct=+$('s_minpct').value||0;S.bigP=+$('s_bigp').value||0;S.stockF=+$('s_sf').value||0.8;S.light=$('s_light').checked;S.goal=+$('s_goal').value||0;S.fs=+$('s_fs').value||100;S.beep=$('s_beep').checked;applyLook();S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||15;S.offer=+$('s_off').value||70;
+  S.url=$('s_url').value.trim();S.pw=$('s_pw').value;S.autoRate=$('s_auto').checked;if(S.autoRate)S.rateDate='';S.minP=+$('s_minp').value||0;S.minPct=+$('s_minpct').value||0;S.bigP=+$('s_bigp').value||0;S.stockF=+$('s_sf').value||0.8;S.light=$('s_light').checked;S.goal=+$('s_goal').value||0;S.fs=+$('s_fs').value||100;S.beep=$('s_beep').checked;applyLook();S.rate=+$('s_rate').value||150;S.fee=+$('s_fee').value||15;S.offer=+$('s_off').value||70;S.offerBasis=$('s_basis').value;S.storePct=+$('s_spct').value||100;
   save();$('setM').classList.add('hidden');labels();renderAll();sync();updateRate();toast('Settings saved');
  },
  closeForm:()=>$('formM').classList.add('hidden'),
@@ -725,7 +741,7 @@ function openScan(cb,multi){warmLoc();try{ac=ac||new(window.AudioContext||window
   .catch(()=>{toast('Camera unavailable. Allow camera access for this site in your browser settings.',false);closeScan()});
 }
 function closeScan(){
- $('scanM').classList.add('hidden');
+ $('scanM').classList.add('hidden');$('shTools').classList.add('hidden');
  if(scanner){const s=scanner;scanner=null;s.stop().then(()=>s.clear()).catch(()=>{})}
 }
 A.scan=t=>openScan(v=>{
@@ -902,14 +918,14 @@ function renderShelf(){
   return `<div class="flex justify-between gap-2 text-gray-200"><span class="truncate">${esc(c.title)} <span class="text-gray-500 text-xs">${esc(c.format)}</span></span><b class="${v.t==='BUY'?'text-emerald-300':v.t==='SKIP'?'text-red-300':'text-gray-400'} shrink-0">${v.t}${v.max?' up to '+yen(v.max):''}</b></div>`}).join('');
 }
 document.addEventListener('input',e=>{const k=e.target.dataset.spx;if(k===undefined)return;const c=shComp(shelf[k]),v=+e.target.value;if(c)$('sbd'+k).outerHTML=shBadge(c,v>0?v:lowP(c),k)});
-A.shelf=()=>openScan(v=>{
+A.shelf=()=>{$('shTools').classList.remove('hidden');fillShDefaults();openScan(v=>{
  if(unkOpen)return;
  const ms=S.comps.filter(c=>c.code===v||codeKey(c.code)===codeKey(v));
  if(!ms.length){$('scanInfo').textContent='Unknown barcode - type the game title';openUnknown(v);return}
  ms.forEach(c=>{const key={code:c.code,format:c.format,console:c.console,title:c.title};shelf=[key,...shelf.filter(x=>!(x.code===c.code&&x.format===c.format&&x.console===c.console&&x.title===c.title))]});
- shelf=shelf.slice(0,40);renderShelf();
+ shelf=shelf.slice(0,40);renderShelf();S.lastCon=ms[0].console;S.lastFmt=ms[0].format;save();fillShDefaults();
  const c=ms[0],vd=verdict(c,lowP(c));$('scanInfo').textContent=(vd.t==='?'?'':vd.t+': ')+c.title+(vd.max?' | pay up to '+yen(vd.max):'');
-},true);
+},true)};
 A.sbask=k=>{const c=shComp(shelf[k]);if(!c)return;const el=$('spx'+k),v=+(el&&el.value)||lowP(c);
  if(!(v>0)){toast('Type the shelf price first',false);if(el)el.focus();return}addBasket(c,v,c.rank||'B')};
 A.shClear=()=>{shelf=[];renderShelf()};
@@ -977,7 +993,7 @@ function profitChart(){
 let sugList=[];
 const REV=Object.fromEntries(Object.entries(TYPE_MAP).map(([k,v])=>[norm(v),k]));
 const appConsole=t=>{const r=REV[norm(t)]||t;return CON.find(c=>norm(c)===norm(r))||r};
-function sugSearch(q,field){
+function sugSearch(q,field,lim,filt){
  const n=norm(q),k=codeKey(q),out=[],idx={},cand=[];
  const score=(title,jan)=>{if(field==='code'){const jk=codeKey(jan);return jan&&jk===k?0:(jan&&jk.includes(k)?1:9)}
   const t=norm(title);return t===n?0:t.startsWith(n)?1:t.includes(n)?2:n.split(/\s+/).every(w=>t.includes(w))?3:9};
@@ -988,7 +1004,7 @@ function sugSearch(q,field){
  if(field==='code'&&!out.length&&k.length>=5){
   S.comps.forEach(c=>{if(c.code&&dl1(codeKey(c.code),k))out.push({title:c.title,code:c.code,console:c.console,format:c.format,src:'Comps (close match)'})});
   S.stock.forEach(r=>{if(r.jan&&dl1(codeKey(r.jan),k))out.push({title:r.name,code:r.jan,console:appConsole(r.type),format:r.format==='New'?'':r.format,src:'STOCK (close match)'})})}
- return out.slice(0,6);
+ return (filt?out.filter(filt):out).slice(0,lim||6);
 }
 function showSug(field){
  const q=(field==='code'?$('f_code'):$('f_title')).value.trim();
@@ -1028,12 +1044,17 @@ A.compact=()=>{S.compact=!S.compact;save();renderStock()};
 document.addEventListener('change',e=>{const k=e.target.dataset.cond;if(k===undefined)return;const c=cart[k];c.cond=e.target.value;if(!c.manual)c.offer=defOffer(c);renderCart()});
 $('lotRound').addEventListener('change',renderCart);
 // ---- unknown barcode during a shelf scan ----
-function openUnknown(v){
- unkCode=v;unkOpen=true;$('unk_code').textContent='Barcode: '+v;
- $('unk_title').value='';$('unk_price').value='';$('unk_comp').value='';$('unk_save').checked=true;
- const sel=$('unk_con');sel.innerHTML=CON.map(c=>`<option>${esc(c)}</option>`).join('');if(lastUnk.con)sel.value=lastUnk.con;
- $('unk_fmt').value=lastUnk.fmt;$('unkSug').classList.add('hidden');
- $('unkM').classList.remove('hidden');$('unk_title').focus();
+const AI_READER=false;   // set to true later to show the "Read the cover with AI" button (needs the Anthropic key setup in Code.gs)
+function openUnknown(v,pre){
+ $('aiBox').classList.toggle('hidden',!AI_READER);
+ pre=pre||{};unkCode=v||'';unkOpen=true;
+ $('unk_code').textContent=unkCode?'Barcode / code: '+unkCode:'No barcode';
+ $('unk_title').value=pre.title||'';$('unk_price').value='';$('unk_comp').value='';$('unk_save').checked=true;$('aiMsg').textContent='';
+ const sel=$('unk_con');sel.innerHTML=CON.map(c=>`<option>${esc(c)}</option>`).join('');
+ const want=pre.console||S.lastCon;
+ if(want){if(![...sel.options].some(o=>o.value===want)){const o=document.createElement('option');o.value=o.textContent=want;sel.appendChild(o)}sel.value=want}
+ $('unk_fmt').value=(pre.format==='CIB'||pre.format==='Loose')?pre.format:(S.lastFmt||'CIB');
+ $('unkSug').classList.add('hidden');$('unkM').classList.remove('hidden');$('unk_title').focus();if(pre.title)showUnkSug();
 }
 function closeUnk(){unkOpen=false;$('unkM').classList.add('hidden')}
 function showUnkSug(){
@@ -1054,7 +1075,7 @@ A.unkSkip=()=>{closeUnk()};
 A.unkSave=()=>{
  const title=$('unk_title').value.trim();if(!title)return toast('Type the game title',false);
  const con=$('unk_con').value,fmt=$('unk_fmt').value,price=+$('unk_price').value||0,comp=+$('unk_comp').value||0;
- lastUnk={con,fmt};
+ S.lastCon=con;S.lastFmt=fmt;save();
  let c=S.comps.find(x=>x.console===con&&x.format===fmt&&norm(x.title)===norm(title));
  if(c){fillMissing({title,code:unkCode,console:con,format:fmt,compUSD:comp})}
  else{
@@ -1189,6 +1210,63 @@ A.tripShare=()=>{const t=tripText($('tripDate').value||today());
  if(navigator.share)navigator.share({title:'Rocket Hub trip',text:t}).catch(()=>{});
  else navigator.clipboard.writeText(t).then(()=>toast('Summary copied'),()=>toast('Could not copy',false))};
 $('tripDate').addEventListener('change',renderTrip);
+
+// ---- no-barcode helpers: defaults, find by title/code, AI cover reader ----
+function fillShDefaults(){
+ const c=$('sh_con');c.innerHTML=CON.map(x=>`<option>${esc(x)}</option>`).join('');
+ if(S.lastCon&&![...c.options].some(o=>o.value===S.lastCon)){const o=document.createElement('option');o.value=o.textContent=S.lastCon;c.appendChild(o)}
+ c.value=S.lastCon||CON[0];$('sh_fmt').value=S.lastFmt||'CIB';
+}
+$('sh_con').addEventListener('change',e=>{S.lastCon=e.target.value;save()});
+$('sh_fmt').addEventListener('change',e=>{S.lastFmt=e.target.value;save()});
+function shelfAdd(c){const key={code:c.code,format:c.format,console:c.console,title:c.title};
+ shelf=[key,...shelf.filter(x=>!(x.code===c.code&&x.format===c.format&&x.console===c.console&&x.title===c.title))].slice(0,40);renderShelf()}
+let fdList=[];
+function fdSearch(){
+ const q=$('fd_q').value.trim(),b=$('fd_list');
+ if(q.length<2){b.classList.add('hidden');return}
+ const codeLike=!/\s/.test(q)&&/[0-9-]/.test(q),con=$('fd_con').value,fmt=$('fd_fmt').value;
+ fdList=sugSearch(q,codeLike?'code':'title',8,x=>(!con||norm(x.console)===norm(con))&&(!fmt||x.format===fmt));
+ if(!fdList.length){b.classList.add('hidden');return}
+ b.innerHTML=fdList.map((x,i)=>`<button class="block w-full text-left px-3 py-2" data-a="fdPick" data-i="${i}"><div class="text-white text-sm">${esc(x.title)}</div><div class="text-xs text-gray-400">${esc(x.console)} | ${esc(x.format||'-')} | ${x.code?esc(x.code):'no code'} | ${x.src}</div></button>`).join('');
+ b.classList.remove('hidden');
+}
+['input'].forEach(()=>$('fd_q').addEventListener('input',fdSearch));
+$('fd_con').addEventListener('change',fdSearch);$('fd_fmt').addEventListener('change',fdSearch);
+A.fdOpen=()=>{unkOpen=true;const c=$('fd_con');c.innerHTML='<option value="">Any console</option>'+CON.map(x=>`<option>${esc(x)}</option>`).join('');
+ if(S.lastCon&&[...c.options].some(o=>o.value===S.lastCon))c.value=S.lastCon;
+ $('fd_fmt').value=S.lastFmt||'';$('fd_q').value='';$('fd_list').classList.add('hidden');$('findM').classList.remove('hidden');$('fd_q').focus()};
+A.fdClose=()=>{$('findM').classList.add('hidden');if($('unkM').classList.contains('hidden'))unkOpen=false};
+A.fdPick=i=>{const x=fdList[i];if(!x)return;
+ const c=S.comps.find(y=>y.console===x.console&&y.format===x.format&&norm(y.title)===norm(x.title));
+ A.fdClose();
+ if(c){shelfAdd(c);S.lastCon=c.console;S.lastFmt=c.format;save();fillShDefaults();toast('Added to the review list')}
+ else openUnknown(x.code||'',{title:x.title,console:x.console,format:x.format})};
+A.fdNew=()=>{const q=$('fd_q').value.trim(),codeLike=q&&!/\s/.test(q)&&/[0-9-]/.test(q),con=$('fd_con').value;
+ A.fdClose();openUnknown(codeLike?q:'',codeLike?{console:con||undefined}:{title:q,console:con||undefined})};
+const CONALIAS={'super famicom':'SFC','sega saturn':'Saturn','playstation':'PS1','playstation 2':'PS2','game boy advance':'GBA','nintendo 64':'N64','sega dreamcast':'Dreamcast','nintendo ds':'DS','nintendo 3ds':'3DS','mega drive':'MegaDrive','sega mega drive':'MegaDrive','nintendo wii':'Wii','playstation portable':'PSP'};
+const mapCon=x=>{const n=norm(x);return CON.find(c=>norm(c)===n)||CONALIAS[n]||(x||'')};
+A.aiRead=()=>$('aiFile').click();
+$('aiFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)aiRead(f)});
+async function aiRead(file){
+ const msg=$('aiMsg');msg.textContent='Reading the photo...';
+ try{
+  const img=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const sc=Math.min(1,1024/Math.max(im.width,im.height)),cv=document.createElement('canvas');
+   cv.width=Math.round(im.width*sc);cv.height=Math.round(im.height*sc);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);res(cv.toDataURL('image/jpeg',0.72).split(',')[1])};im.onerror=rej;im.src=r.result};r.onerror=rej;r.readAsDataURL(file)});
+  const r=await(await fetch(S.url,{method:'POST',body:JSON.stringify({action:'readCover',pw:S.pw,image:img})})).json();
+  if(r.error==='not_configured'){msg.textContent='The AI reader is not set up yet. It needs your Anthropic API key saved in Apps Script (ANTHROPIC_KEY).';return}
+  if(r.error==='passcode_required'){msg.textContent='Set a passcode in Code.gs first, so strangers cannot use your AI credit.';return}
+  if(r.error==='auth'||r.ok===false){msg.textContent='Wrong passcode. Check Settings.';return}
+  if(r.error){msg.textContent='Could not read the photo ('+r.error+(r.detail?': '+r.detail:'')+').';return}
+  const i=r.info||{};
+  if(i.title)$('unk_title').value=i.title;
+  const con=mapCon(i.console);if(con){const sel=$('unk_con');if(![...sel.options].some(o=>o.value===con)){const o=document.createElement('option');o.value=o.textContent=con;sel.appendChild(o)}sel.value=con}
+  if(i.format==='CIB'||i.format==='Loose')$('unk_fmt').value=i.format;
+  if(i.code&&!unkCode){unkCode=String(i.code).trim();$('unk_code').textContent='Product code (read from photo): '+unkCode}
+  showUnkSug();
+  msg.textContent='Read: '+[i.title,i.console,i.code].filter(Boolean).join(' | ')+' - please check it before saving.';
+ }catch(err){msg.textContent='Could not read the photo. Check your connection and try again.'}
+}
 
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
@@ -1327,7 +1405,7 @@ $('q1').addEventListener('input',search1);$('q2').addEventListener('input',searc
 $('fSt').addEventListener('change',renderInv);$('mSel').addEventListener('change',renderInv);$('stQ').addEventListener('input',renderStock);$('stSort').addEventListener('change',renderStock);$('fCon').addEventListener('change',renderInv);$('fRank').addEventListener('change',renderInv);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('lowM').classList.add('hidden');$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
 
-function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1'+(S.autoRate?' (auto)':'');$('offLbl').textContent='('+S.offer+'% of net after '+S.fee+'% fee)'}
+function labels(){$('rateLbl').textContent='¥'+S.rate+' / $1'+(S.autoRate?' (auto)':'');$('offLbl').textContent=S.offerBasis==='store'?'('+S.storePct+'% of the cheapest store price you have seen)':'('+S.offer+'% of net after '+S.fee+'% fee)'}
 function renderAll(){pills();search1();search2();renderCart();renderInv();renderWatch();renderStock();renderBasket();renderRecent();renderShelf()}
 
 CON.forEach(c=>{['f_con','fCon'].forEach(id=>{const o=document.createElement('option');o.value=o.textContent=c;$(id).appendChild(o)})});
