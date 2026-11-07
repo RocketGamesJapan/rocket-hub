@@ -235,6 +235,8 @@ body.light .pill{color:#374151}
  <div class="flex justify-between items-center"><div class="font-bold text-white">🧾 Trip summary</div><input id="tripDate" type="date" class="inp !w-auto !py-1.5"></div>
  <div id="tripBody" class="space-y-2 text-sm"></div>
  <div class="flex justify-end gap-2"><button class="btn bg-[#0b0c10]" data-a="tripClose">Close</button><button class="btn bg-sky-500 text-white" data-a="tripShare">Share</button></div></div></div>
+<div id="photoM" class="fixed inset-0 z-[70] hidden bg-black/90 p-4 flex items-center justify-center" data-a="photoClose"><div class="text-center space-y-2"><img id="photoBig" alt="" class="max-h-[70vh] max-w-full rounded-xl mx-auto"><div id="photoCap" class="text-white text-sm"></div><div class="text-xs text-gray-400">Tap anywhere to close</div></div></div>
+<input id="photoFile" type="file" accept="image/*" capture="environment" class="hidden">
 <div id="findM" class="fixed inset-0 z-[60] hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-8">
  <div class="font-bold text-white">Find a game without a barcode</div>
  <input id="fd_q" class="inp" placeholder="Title or product code, e.g. HDR-0159" autocomplete="off">
@@ -311,7 +313,7 @@ body.light .pill{color:#374151}
 </div>
 
 <script>
-const CON=["3DS","Dreamcast","DS","Famicom","GBA","Game Boy","Game Boy Color","Gamecube","Guide Book","MegaDrive","N64","PS1","PS2","PSP","Saturn","SFC","Toys/Other","Vita","Wii"];
+const CON=["3DS","Dreamcast","DS","Famicom","GBA","Game Boy","Game Boy Color","Gamecube","Guide Book","MegaDrive","N64","PS1","PS2","PS3","PSP","Saturn","SFC","Toys/Other","Vita","Wii"];
 const SEED=[
  {code:"HDR-0159",title:"Crazy Taxi 2",console:"Dreamcast",storePriceJPY:1500,format:"CIB",rank:"A",compUSD:35},
  {code:"T-1201M",title:"Sonic the Hedgehog",console:"MegaDrive",storePriceJPY:1800,format:"CIB",rank:"A",compUSD:42},
@@ -556,7 +558,7 @@ function search1(){
   return `<div class="card space-y-3 flex flex-col justify-between ${isW(c)?'ring-2 ring-yellow-300':''}">
    <div><div class="flex justify-between gap-2 text-xs"><span class="font-mono text-sky-300">${esc(c.code)}</span>
     <span><span class="text-gray-400 mr-1">${esc(c.format)}</span><span class="rk rk-${esc(c.rank)}">${esc(c.rank)}</span></span></div>
-    <div class="flex justify-between gap-2 mt-2"><div class="font-bold text-white text-lg leading-snug">${esc(c.title)}</div><button data-a="watch" data-i="${i}" class="text-2xl leading-none ${isW(c)?'text-yellow-300':'text-gray-600'}" aria-label="Watchlist">★</button></div>
+    <div class="flex justify-between gap-2 mt-2">${c.img?`<img src="${imgUrl(c.img)}" loading="lazy" alt="" data-a="photoView" data-i="${i}" class="w-16 h-16 object-cover rounded-lg shrink-0 cursor-pointer">`:''}<div class="font-bold text-white text-lg leading-snug flex-1">${esc(c.title)}</div><button data-a="watch" data-i="${i}" class="text-2xl leading-none ${isW(c)?'text-yellow-300':'text-gray-600'}" aria-label="Watchlist">★</button></div>
    ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}
    ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
    ${bandBox(c,lowP(c),i,false)}
@@ -573,6 +575,7 @@ function search1(){
     <a class="btn text-center bg-[#0b0c10] border border-white/10 text-sky-300 col-span-2" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold listings</a>
     <div class="col-span-2 grid grid-cols-3 gap-2"><a class="btn text-center text-xs bg-[#0b0c10] border border-white/10 text-sky-300 !px-1" target="_blank" rel="noopener" href="${mercariUrl(c)}">Mercari</a><a class="btn text-center text-xs bg-[#0b0c10] border border-white/10 text-sky-300 !px-1" target="_blank" rel="noopener" href="${yahooUrl(c)}">Yahoo Auctions</a><a class="btn text-center text-xs bg-[#0b0c10] border border-white/10 text-sky-300 !px-1" target="_blank" rel="noopener" href="${surugayaUrl(c)}">Surugaya</a></div>
     <div class="col-span-2 text-xs text-gray-500">Search: ${esc(jpTerm(c))}${c.jpTitle||hasJp(c.title)?'':' <span class="text-amber-300">(no Japanese title saved)</span>'}</div>
+    <button class="btn bg-[#0b0c10] border border-white/10 text-white col-span-2" data-a="photo" data-i="${i}">📷 ${c.img?'Replace':'Add'} photo (cover or cartridge label)</button>
     <div class="col-span-2 flex gap-2"><input id="jp${i}" class="inp" placeholder="Japanese title (for Mercari)" value="${esc(c.jpTitle||'')}"><button class="btn bg-[#0b0c10] border border-white/10 text-white shrink-0" data-a="jpSave" data-i="${i}">Save</button></div>
    </div></div></details></div>`}).join('')
  :`<div class="card sm:col-span-2 lg:col-span-3 text-center space-y-3"><div class="text-white font-bold">Nothing matches</div>
@@ -913,7 +916,7 @@ function renderShelf(){
  shelf=shelf.filter(shComp);
  $('shelfBox').classList.toggle('hidden',!shelf.length);$('shCount').textContent='('+shelf.length+')';
  $('shelfList').innerHTML=shelf.map((x,k)=>{const c=shComp(x);
-  return `<div class="rounded-xl bg-[#0b0c10] p-2 space-y-1"><div class="flex justify-between gap-2"><div class="min-w-0"><div class="text-white text-sm truncate">${esc(c.title)}</div><div class="text-xs text-gray-500">${esc(c.console)} | ${esc(c.format)}${c.compUSD?'':' | no comp'}</div></div>${shBadge(c,lowP(c),k)}</div><div class="flex items-center gap-2"><span class="text-xs text-gray-400 shrink-0">Pay up to <b class="text-white">${c.compUSD?yen(maxPay(c)):'-'}</b></span><input id="spx${k}" data-spx="${k}" type="number" inputmode="numeric" placeholder="shelf ¥" class="inp !py-1.5 !w-24"><button class="btn bg-[#0b0c10] border border-white/10 !py-1.5 shrink-0" data-a="padOpen" data-i="spx${k}">🔢</button><button class="btn bg-sky-500 text-white !py-1.5 shrink-0" data-a="sbask" data-i="${k}">＋ Basket</button></div></div>`}).join('');
+  return `<div class="rounded-xl bg-[#0b0c10] p-2 space-y-1"><div class="flex justify-between gap-2">${c.img?`<img src="${imgUrl(c.img)}" loading="lazy" alt="" class="w-12 h-12 rounded-lg object-cover shrink-0">`:''}<div class="min-w-0 flex-1"><div class="text-white text-sm truncate">${esc(c.title)}</div><div class="text-xs text-gray-500">${esc(c.console)} | ${esc(c.format)}${c.compUSD?'':' | no comp'}</div></div>${shBadge(c,lowP(c),k)}</div><div class="flex items-center gap-2"><span class="text-xs text-gray-400 shrink-0">Pay up to <b class="text-white">${c.compUSD?yen(maxPay(c)):'-'}</b></span><input id="spx${k}" data-spx="${k}" type="number" inputmode="numeric" placeholder="shelf ¥" class="inp !py-1.5 !w-24"><button class="btn bg-[#0b0c10] border border-white/10 !py-1.5 shrink-0" data-a="padOpen" data-i="spx${k}">🔢</button><button class="btn bg-sky-500 text-white !py-1.5 shrink-0" data-a="sbask" data-i="${k}">＋ Basket</button></div></div>`}).join('');
  $('shelfMini').innerHTML=shelf.slice(0,4).map(x=>{const c=shComp(x),v=verdict(c,lowP(c));
   return `<div class="flex justify-between gap-2 text-gray-200"><span class="truncate">${esc(c.title)} <span class="text-gray-500 text-xs">${esc(c.format)}</span></span><b class="${v.t==='BUY'?'text-emerald-300':v.t==='SKIP'?'text-red-300':'text-gray-400'} shrink-0">${v.t}${v.max?' up to '+yen(v.max):''}</b></div>`}).join('');
 }
@@ -991,16 +994,18 @@ function profitChart(){
 
 // ---- match suggestions while typing in the add form ----
 let sugList=[];
+const imgUrl=(id,w)=>'https://drive.google.com/thumbnail?id='+encodeURIComponent(id)+'&sz=w'+(w||160);
+const sugRow=(x,i,act)=>`<button class="flex items-center gap-3 w-full text-left px-3 py-2" data-a="${act}" data-i="${i}">${x.img?`<img src="${imgUrl(x.img)}" loading="lazy" alt="" class="w-12 h-12 rounded-lg object-cover shrink-0">`:''}<span class="min-w-0"><span class="block text-white text-sm">${esc(x.title)}</span><span class="block text-xs text-gray-400">${esc(x.console)} | ${esc(x.format||'-')} | ${x.code?esc(x.code):'no code'} | ${x.src}</span></span></button>`;
 const REV=Object.fromEntries(Object.entries(TYPE_MAP).map(([k,v])=>[norm(v),k]));
 const appConsole=t=>{const r=REV[norm(t)]||t;return CON.find(c=>norm(c)===norm(r))||r};
 function sugSearch(q,field,lim,filt){
  const n=norm(q),k=codeKey(q),out=[],idx={},cand=[];
  const score=(title,jan)=>{if(field==='code'){const jk=codeKey(jan);return jan&&jk===k?0:(jan&&jk.includes(k)?1:9)}
   const t=norm(title);return t===n?0:t.startsWith(n)?1:t.includes(n)?2:n.split(/\s+/).every(w=>t.includes(w))?3:9};
- S.comps.forEach(c=>{const s=score(c.title,c.code);if(s<9)cand.push({s,x:{title:c.title,code:c.code,console:c.console,format:c.format,src:'Comps'}})});
+ S.comps.forEach(c=>{const s=score(c.title,c.code);if(s<9)cand.push({s,x:{title:c.title,code:c.code,console:c.console,format:c.format,img:c.img||'',src:'Comps'}})});
  S.stock.forEach(r=>{const s=score(r.name,r.jan);if(s<9)cand.push({s:s+0.5,x:{title:r.name,code:r.jan,console:appConsole(r.type),format:r.format==='New'?'':r.format,src:'STOCK'}})});
  cand.sort((a,b)=>a.s-b.s).forEach(({x})=>{const k=norm(x.title)+'|'+norm(x.console)+'|'+x.format;
-  if(idx[k]){if(!idx[k].code&&x.code)idx[k].code=x.code;return}idx[k]=x;out.push(x)});
+  if(idx[k]){if(!idx[k].code&&x.code)idx[k].code=x.code;if(!idx[k].img&&x.img)idx[k].img=x.img;return}idx[k]=x;out.push(x)});
  if(field==='code'&&!out.length&&k.length>=5){
   S.comps.forEach(c=>{if(c.code&&dl1(codeKey(c.code),k))out.push({title:c.title,code:c.code,console:c.console,format:c.format,src:'Comps (close match)'})});
   S.stock.forEach(r=>{if(r.jan&&dl1(codeKey(r.jan),k))out.push({title:r.name,code:r.jan,console:appConsole(r.type),format:r.format==='New'?'':r.format,src:'STOCK (close match)'})})}
@@ -1011,7 +1016,7 @@ function showSug(field){
  if(q.length<(field==='code'?4:2)){hideSug();return}
  sugList=sugSearch(q,field);
  if(!sugList.length){hideSug();return}
- $('sugBox').innerHTML=sugList.map((x,i)=>`<button class="block w-full text-left px-3 py-2" data-a="sugPick" data-i="${i}"><div class="text-white text-sm">${esc(x.title)}</div><div class="text-xs text-gray-400">${esc(x.console)} | ${esc(x.format||'-')} | ${x.code?esc(x.code):'no JAN'} | ${x.src}</div></button>`).join('');
+ $('sugBox').innerHTML=sugList.map((x,i)=>sugRow(x,i,'sugPick')).join('');
  $('sugBox').classList.remove('hidden');
 }
 function hideSug(){$('sugBox').classList.add('hidden')}
@@ -1062,7 +1067,7 @@ function showUnkSug(){
  if(q.length<2){b.classList.add('hidden');return}
  unkList=sugSearch(q,'title').slice(0,4);
  if(!unkList.length){b.classList.add('hidden');return}
- b.innerHTML=unkList.map((x,i)=>`<button class="block w-full text-left px-3 py-2" data-a="unkPick" data-i="${i}"><div class="text-white text-sm">${esc(x.title)}</div><div class="text-xs text-gray-400">${esc(x.console)} | ${esc(x.format||'-')} | ${x.code?esc(x.code):'no JAN'} | ${x.src}</div></button>`).join('');
+ b.innerHTML=unkList.map((x,i)=>sugRow(x,i,'unkPick')).join('');
  b.classList.remove('hidden');
 }
 $('unk_title').addEventListener('input',showUnkSug);
@@ -1111,7 +1116,7 @@ A.msSend=()=>{const items=[...document.querySelectorAll('#msBody input[data-ms]'
 
 // ---- Japanese search links ----
 const JPCON={'3ds':'ニンテンドー3DS','dreamcast':'ドリームキャスト','ds':'ニンテンドーDS','famicom':'ファミコン','gba':'ゲームボーイアドバンス','gb':'ゲームボーイ','game boy':'ゲームボーイ','gbc':'ゲームボーイカラー','game boy color':'ゲームボーイカラー',
- 'gamecube':'ゲームキューブ','megadrive':'メガドライブ','n64':'ニンテンドー64','ps1':'プレイステーション','ps2':'プレイステーション2','psp':'PSP','saturn':'セガサターン','sfc':'スーパーファミコン','super famicom':'スーパーファミコン',
+ 'gamecube':'ゲームキューブ','megadrive':'メガドライブ','n64':'ニンテンドー64','ps1':'プレイステーション','ps2':'プレイステーション2','ps3':'プレイステーション3','psp':'PSP','saturn':'セガサターン','sfc':'スーパーファミコン','super famicom':'スーパーファミコン',
  'vita':'PS Vita','wii':'Wii','wii u':'Wii U','switch':'ニンテンドースイッチ','ps5':'PS5','360':'Xbox 360','guide book':'攻略本'};
 const hasJp=t=>/[\u3040-\u30ff\u3400-\u9fff]/.test(String(t||''));
 const jpTerm=c=>(c.jpTitle||c.title)+' '+(JPCON[norm(c.console)]||(c.console==='Toys/Other'?'':c.console));
@@ -1228,7 +1233,7 @@ function fdSearch(){
  const codeLike=!/\s/.test(q)&&/[0-9-]/.test(q),con=$('fd_con').value,fmt=$('fd_fmt').value;
  fdList=sugSearch(q,codeLike?'code':'title',8,x=>(!con||norm(x.console)===norm(con))&&(!fmt||x.format===fmt));
  if(!fdList.length){b.classList.add('hidden');return}
- b.innerHTML=fdList.map((x,i)=>`<button class="block w-full text-left px-3 py-2" data-a="fdPick" data-i="${i}"><div class="text-white text-sm">${esc(x.title)}</div><div class="text-xs text-gray-400">${esc(x.console)} | ${esc(x.format||'-')} | ${x.code?esc(x.code):'no code'} | ${x.src}</div></button>`).join('');
+ b.innerHTML=fdList.map((x,i)=>sugRow(x,i,'fdPick')).join('');
  b.classList.remove('hidden');
 }
 ['input'].forEach(()=>$('fd_q').addEventListener('input',fdSearch));
@@ -1266,6 +1271,26 @@ async function aiRead(file){
   showUnkSug();
   msg.textContent='Read: '+[i.title,i.console,i.code].filter(Boolean).join(' | ')+' - please check it before saving.';
  }catch(err){msg.textContent='Could not read the photo. Check your connection and try again.'}
+}
+
+// ---- cover / label photos (stored in your Drive, shown as thumbnails) ----
+let photoComp=null;
+A.photoView=i=>{const c=S.comps[i];if(!c||!c.img)return;$('photoBig').src=imgUrl(c.img,800);$('photoCap').textContent=c.title+' ('+c.console+', '+c.format+')';$('photoM').classList.remove('hidden')};
+A.photoClose=()=>$('photoM').classList.add('hidden');
+A.photo=i=>{photoComp=S.comps[i];if(photoComp)$('photoFile').click()};
+$('photoFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f&&photoComp)uploadPhoto(f,photoComp)});
+async function uploadPhoto(file,c){
+ if(!S.url)return toast('Connect your sheet first',false);
+ toast('Uploading photo...');
+ try{
+  const img=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const sc=Math.min(1,480/Math.max(im.width,im.height)),cv=document.createElement('canvas');
+   cv.width=Math.round(im.width*sc);cv.height=Math.round(im.height*sc);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);res(cv.toDataURL('image/jpeg',0.7).split(',')[1])};im.onerror=rej;im.src=r.result};r.onerror=rej;r.readAsDataURL(file)});
+  const r=await(await fetch(S.url,{method:'POST',body:JSON.stringify({action:'savePhoto',pw:S.pw,code:c.code,title:c.title,console:c.console,format:c.format,image:img})})).json();
+  if(r.ok===false)return toast('Wrong passcode. Check Settings.',false);
+  if(r.error==='row')return toast('Could not find that game in Comps_DB. Reload and try again.',false);
+  if(r.error)return toast('Photo not saved ('+r.error+')',false);
+  c.img=r.id;save();search1();toast('Photo saved');
+ }catch(err){toast('Could not upload the photo. Check your connection.',false)}
 }
 
 let lastSyncT=0,lastStage=null;
