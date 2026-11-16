@@ -76,6 +76,7 @@ body.light .pill{color:#374151}
  <button class="w-full py-6 rounded-2xl bg-sky-500 text-white text-xl font-extrabold" data-a="scan" data-i="q1">📷 Scan barcode</button>
  <button class="w-full py-3 rounded-2xl bg-[#12131C] border border-sky-400/40 text-sky-300 font-bold" data-a="shelf">📚 Shelf scan (keep scanning, review the list)</button>
  <button class="w-full py-3 rounded-2xl bg-[#12131C] border border-white/10 text-gray-200 font-bold" data-a="trip">🧾 Trip summary</button>
+ <button class="w-full py-3 rounded-2xl bg-[#12131C] border border-white/10 text-gray-200 font-bold" data-a="rapid">⚡ Rapid add to comps (Mercari, Yahoo...)</button>
  <div class="card space-y-3">
   <div class="flex gap-2">
    <input id="q1" class="inp" placeholder="Title, catalog code or JAN barcode" autocomplete="off">
@@ -220,6 +221,7 @@ body.light .pill{color:#374151}
    <div id="locBox"><label id="f_locLbl" class="lbl">Bought at</label><div class="flex gap-2"><input id="f_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><select class="inp !w-24 shrink-0" data-store="f_loc"><option value="">Stores</option></select><button class="btn bg-sky-500 text-white" data-a="gps" data-i="f_loc" aria-label="Find my location">📍</button></div>
     <datalist id="stores"><option>Book Off Iikura</option><option>Book Off Notame</option><option>Hard Off Kasuga Shirouzu</option><option>Hard Off Nakama</option><option>Hard Off Outlets</option><option>Hard Off Yahatanishi</option><option>Manga Soukou Airport</option><option>Manga Soukou Costco</option><option>Manga Soukou Iizuka</option><option>Manga Soukou Kaizuka</option><option>Manga Soukou Tsukiguma</option><option>Mercari</option><option>Willy</option><option>Yahoo Auction</option><option>Yahoo Flea Market</option></datalist></div>
   </div>
+  <div id="skuBox"><label class="lbl">SKU for this copy (leave empty for the suggestion)</label><input id="f_sku" class="inp" placeholder="auto, e.g. 1A"><div id="skuHint" class="text-xs text-gray-400 mt-1"></div></div>
   <div id="notesBox"><label class="lbl">Notes (optional)</label><input id="f_notes" class="inp" placeholder="e.g. box damaged, disc scratched"></div>
   <button class="text-sm text-sky-300 text-left" data-a="fe">Check eBay sold listings for this title ↗</button>
   <div id="saveCompBox" class="hidden"><label class="flex items-center gap-2 text-sm text-gray-300"><input id="f_saveComp" type="checkbox" checked> Also save to comps database for next time</label></div>
@@ -231,6 +233,17 @@ body.light .pill{color:#374151}
  </div>
 </div>
 
+<div id="rapidM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-4">
+ <div class="flex justify-between items-center"><div class="font-bold text-white">⚡ Rapid add to comps</div><button class="btn bg-[#0b0c10] !py-1.5" data-a="rapidClose">Done</button></div>
+ <div class="grid grid-cols-2 gap-2"><select id="rp_con" class="inp"></select><select id="rp_fmt" class="inp"><option>CIB</option><option>Loose</option></select></div>
+ <div class="flex gap-2"><input id="rp_src" list="stores" class="inp" placeholder="Where (e.g. Mercari)"><select class="inp !w-24 shrink-0" data-store="rp_src"><option value="">Stores</option></select></div>
+ <input id="rp_title" class="inp" placeholder="Game title (or scan a barcode below)" autocomplete="off" enterkeyhint="next">
+ <div id="rp_sug" class="hidden rounded-xl border border-white/10 divide-y divide-white/10 overflow-hidden"></div>
+ <div id="rp_hint" class="text-xs text-gray-400"></div>
+ <input id="rp_price" type="number" inputmode="numeric" class="inp" placeholder="Price ¥ (optional)" enterkeyhint="done">
+ <div class="flex gap-2"><input id="rp_code" class="inp" placeholder="Barcode / code (optional)" autocomplete="off"><button class="btn bg-sky-500 text-white shrink-0" data-a="scan" data-i="rp_code" aria-label="Scan barcode">📷</button></div>
+ <button class="btn bg-sky-500 text-white w-full py-3" data-a="rapidAdd">＋ Add (or press Enter)</button>
+ <div><div class="text-xs text-gray-400 mb-1">Added this session <span id="rp_n"></span></div><div id="rp_log" class="space-y-1 text-sm"></div></div></div></div>
 <div id="tripM" class="fixed inset-0 z-40 hidden bg-black/80 p-4 overflow-y-auto"><div class="card max-w-sm mx-auto space-y-3 mt-8">
  <div class="flex justify-between items-center"><div class="font-bold text-white">🧾 Trip summary</div><input id="tripDate" type="date" class="inp !w-auto !py-1.5"></div>
  <div id="tripBody" class="space-y-2 text-sm"></div>
@@ -328,7 +341,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString();
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('rh_'+k));return v??d}catch{return d}};
 const S={comps:load('comps',SEED),inv:load('inv',[]),rate:load('rate',150),fee:load('fee',15),offer:load('offer',70),
- url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[]),light:load('light',false),fs:load('fs',100),beep:load('beep',true),recent:load('recent',[]),goal:load('goal',0),allTime:load('allTime',null),log:load('log',[]),compact:load('compact',false),offerBasis:load('offerBasis','store'),storePct:load('storePct',100),lastCon:load('lastCon',''),lastFmt:load('lastFmt','CIB'),dataMode:load('dataMode','auto'),lastFull:load('lastFull',0)};
+ url:load('url','https://script.google.com/macros/s/AKfycbzprA4ZzrbdSkCr7rjl_OpeRm8gnSL_bY7s9WDCoSFnQHzDzV1SSpsMv0F03kx5CPM4/exec'),loc:load('loc',''),stores:load('stores',[]),pw:load('pw',''),queue:load('queue',[]),autoRate:load('autoRate',true),rateDate:load('rateDate',''),minP:load('minP',500),minPct:load('minPct',30),bigP:load('bigP',3000),watch:load('watch',[]),stock:load('stock',[]),stockF:load('stockF',0.8),sales:load('sales',[]),basket:load('basket',[]),light:load('light',false),fs:load('fs',100),beep:load('beep',true),recent:load('recent',[]),goal:load('goal',0),allTime:load('allTime',null),log:load('log',[]),compact:load('compact',false),offerBasis:load('offerBasis','store'),storePct:load('storePct',100),lastCon:load('lastCon',''),lastFmt:load('lastFmt','CIB'),dataMode:load('dataMode','auto'),lastFull:load('lastFull',0),rapidSrc:load('rapidSrc','Mercari')};
 const save=()=>{try{Object.keys(S).forEach(k=>localStorage.setItem('rh_'+k,JSON.stringify(S[k])))}catch(e){}};
 let cart=[],hits=[],con='All',formMode='comp';
 
@@ -368,10 +381,11 @@ const PHOTO_TYPES=['Figure','Manga','Pokemon Cards','Yugioh','Guide Book','TCG',
 const stockType=c=>TYPE_MAP[c]||c;
 function toStock(items){
  if(!S.url)return '';
- const rows=items.map(i=>{const t=stockType(i.console);return {title:i.title,code:i.code||'',console:i.console,type:t,format:i.format,rank:i.rank,paidJPY:i.paidJPY,location:i.location,date:i.date||today(),notes:i.notes||'',status:PHOTO_TYPES.includes(t)?'Need photos':'Need to test'}});
+ const batch=[];
+ const rows=items.map(i=>{const t=stockType(i.console),sku=i.sku||nextSku(i.title,t,batch);batch.push({k:gameKey(i.title,t),sku});return {title:i.title,code:i.code||'',console:i.console,type:t,format:i.format,rank:i.rank,paidJPY:i.paidJPY,location:i.location,date:i.date||today(),notes:i.notes||'',sku,status:PHOTO_TYPES.includes(t)?'Need photos':'Need to test'}});
  post('addStock',{items:rows});
- rows.forEach(x=>S.stock.push({name:x.title,sku:'',format:x.format,type:x.type,purchase:x.paidJPY,raw:0,status:x.status,purchaseDate:x.date,saleDate:'',location:x.location,jan:x.code,rank:x.rank,notes:x.notes}));
- return 'added to STOCK sheet';
+ rows.forEach(x=>S.stock.push({name:x.title,sku:x.sku,format:x.format,type:x.type,purchase:x.paidJPY,raw:0,status:x.status,purchaseDate:x.date,saleDate:'',location:x.location,jan:x.code,rank:x.rank,notes:x.notes}));
+ return 'added to STOCK sheet, SKU '+rows.map(r=>r.sku).join(', ');
 }
 const buyStats=c=>{
  const src=S.stock.length?S.stock.filter(r=>r.purchase>0&&stMatch(r,c)).map(r=>({p:r.purchase,d:r.purchaseDate,l:r.location}))
@@ -443,6 +457,7 @@ const stForm=r=>`<div class="mt-3 pt-3 border-t border-white/10 space-y-2">
   <div><label class="lbl">Status</label><select id="ed_status" class="inp">${statusOpts(r)}</select></div>
   <div><label class="lbl">Location</label><div class="flex gap-2"><input id="ed_loc" list="stores" class="inp" value="${esc(r.location)}"><select class="inp !w-24 shrink-0" data-store="ed_loc"><option value="">Stores</option></select></div></div>
  </div>
+ <div><label class="lbl">SKU</label><div class="flex gap-2"><input id="ed_sku" class="inp" value="${esc(r.sku||'')}"><button class="btn bg-[#0b0c10] border border-white/10 text-white shrink-0" data-a="skuSuggest" data-i="${r.row}">Suggest</button></div></div>
  <div><label class="lbl">Notes</label><input id="ed_notes" class="inp" value="${esc(r.notes||'')}" placeholder="e.g. box damaged, disc scratched"></div>
  <div class="grid grid-cols-2 gap-2">
   <div><label class="lbl">Purchase price ¥</label><input id="ed_buy" type="number" class="inp" value="${r.purchase||''}"></div>
@@ -466,7 +481,7 @@ function renderStock(){
   +st('Est. profit',yen(priced.reduce((t,r)=>t+stProfit(r),0)),'list price x '+S.stockF+' minus cost','text-emerald-300');
  $('stMsg').textContent=(stMsg||(S.stock.length?'':'No STOCK data yet. Check Code.gs is deployed and the tab name is right.'))+salesNote();
  $('stList').innerHTML=rows.length?rows.slice(0,200).map(r=>{const d=stDays(r),p=stProfit(r);if(S.compact)return stCompact(r,d);
-  return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${selMode?`<input type="checkbox" data-sel="${r.row}" ${stSel.has(r.row)?'checked':''} class="mr-2" onclick="event.stopPropagation()">`:''}${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span> <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div>${r.notes?`<div class="text-xs text-amber-300 mt-1">📝 ${esc(r.notes)}</div>`:''}</div>${suggestLine(r)}${stageBtn(r)}${stOpen===r.row?stForm(r):''}</div>`}).join('')
+  return `<div class="card !p-3"><div data-a="stOpen" data-i="${r.row}" class="cursor-pointer"><div class="flex justify-between gap-3"><div class="min-w-0"><div class="text-white font-semibold">${selMode?`<input type="checkbox" data-sel="${r.row}" ${stSel.has(r.row)?'checked':''} class="mr-2" onclick="event.stopPropagation()">`:''}${esc(r.name)}${r.jan?'':' <span class="text-amber-300 text-xs">no JAN</span>'}</div><div class="text-xs text-gray-400">${esc(r.type)} | ${esc(r.format)}${r.location?' | '+esc(r.location):''}</div></div><div class="text-right shrink-0"><div class="text-xs ${d>60?'text-amber-300':'text-gray-400'}">${d===''?'':d+'d'}</div><div class="font-mono text-sm ${p>=0?'text-emerald-300':'text-red-400'}">${r.raw?yen(p):'-'}</div></div></div><div class="text-xs mt-1"><span class="text-sky-300">${esc(r.status||'(no status)')}</span>${r.sku?` <span class="text-gray-300">SKU ${esc(r.sku)}</span>`:''} <span class="text-gray-500">paid ${yen(r.purchase)} | list ${r.raw?yen(r.raw):'-'}</span></div>${r.notes?`<div class="text-xs text-amber-300 mt-1">📝 ${esc(r.notes)}</div>`:''}</div>${suggestLine(r)}${stageBtn(r)}${stOpen===r.row?stForm(r):''}</div>`}).join('')
   :'<div class="text-center text-xs text-gray-500">Nothing matches.</div>';
  fillStoreSelects();
  $('attnCount').textContent='('+attnItems().length+')';$('slowCount').textContent='('+slowItems().length+')';$('tqCount').textContent='('+tqList().length+')';$('msCount').textContent='('+missingItems().length+')';
@@ -647,7 +662,7 @@ function openForm(mode,item){
  $('formTitle').textContent=mode==='comp'?'Add to comps database':mode==='cart'?'Add item to offer list':'Add to my inventory';
  $('f_priceLbl').textContent=mode==='comp'?'Shop price (JPY)':'Price paid (JPY)';
  $('f_locLbl').textContent=mode==='comp'?'Seen at':'Bought at';
- $('locBox').classList.toggle('hidden',mode==='cart');$('priceBox').classList.toggle('hidden',mode==='cart');$('saveCompBox').classList.toggle('hidden',mode!=='cart');$('notesBox').classList.toggle('hidden',mode!=='inv');$('f_notes').value='';
+ $('locBox').classList.toggle('hidden',mode==='cart');$('priceBox').classList.toggle('hidden',mode==='cart');$('saveCompBox').classList.toggle('hidden',mode!=='cart');$('notesBox').classList.toggle('hidden',mode!=='inv');$('f_notes').value='';$('skuBox').classList.toggle('hidden',mode!=='inv');$('f_sku').value='';
  $('f_title').value=item?.title||'';$('f_code').value=item?.code||'';
  setConsole(item?.console||S.lastCon||CON[0]);
  $('f_price').value=(item&&lowP(item))||'';$('f_comp').value=item?.compUSD??'';
@@ -662,7 +677,7 @@ function margin(){
 }
 function saveForm(){buyNote='';
  const o={title:$('f_title').value.trim(),code:$('f_code').value.trim().toUpperCase(),console:$('f_con').value,
-  format:$('f_fmt').value,rank:$('f_rank').value,compUSD:+$('f_comp').value||0,notes:$('f_notes').value.trim()};
+  format:$('f_fmt').value,rank:$('f_rank').value,compUSD:+$('f_comp').value||0,notes:$('f_notes').value.trim(),sku:$('f_sku').value.trim()};
  if(!o.title)return toast('Enter a title',false);
  S.lastCon=o.console;S.lastFmt=o.format;
  if(formMode==='cart'){
@@ -750,6 +765,7 @@ A.scan=t=>openScan(v=>{
  if(t==='q1'){$('q1').value=v;con='All';pills();window._sc=1;search1();addRecent(v);if(hits.length===1){const e=$('px'+hits[0]);if(e)e.focus()}}
  else if(t==='q2'){$('q2').value=v;search2()}
  else if(t==='stQ'){$('stQ').value=v;stFilter='All';renderStock();if(stShown.length===1){stOpen=stShown[0].row;renderStock();$('stList').scrollIntoView({behavior:'smooth'})}}
+ else if(t==='rp_code'){$('rp_code').value=v;rapidCodeFill(true)}
  else{$(t).value=v;if(t==='f_code')showSug('code')}
  toast('Scanned '+v);
 });
@@ -829,8 +845,8 @@ A.useSale=i=>{const c=S.comps[i],t=saleStats(c);if(!t)return;
 A.stOpen=r=>{if(selMode){const w=+r;stSel.has(w)?stSel.delete(w):stSel.add(w);renderStock();const sc=$('selCount');if(sc)sc.textContent=stSel.size+' selected';return}
  if(!+r)return toast('This item was just added. Reload the app, then open it.',false);stOpen=stOpen===+r?0:+r;renderStock()};
 A.stSave=row=>{
- const r=S.stock.find(x=>x.row===+row);if(!r)return;r.notes=r.notes||'';
- const nf={name:$('ed_name').value.trim(),jan:$('ed_jan').value.trim(),rank:$('ed_rank').value,status:$('ed_status').value,location:$('ed_loc').value.trim(),purchase:+$('ed_buy').value||0,raw:+$('ed_raw').value||0,notes:$('ed_notes').value.trim()};
+ const r=S.stock.find(x=>x.row===+row);if(!r)return;r.notes=r.notes||'';r.sku=r.sku||'';
+ const nf={name:$('ed_name').value.trim(),jan:$('ed_jan').value.trim(),rank:$('ed_rank').value,status:$('ed_status').value,location:$('ed_loc').value.trim(),purchase:+$('ed_buy').value||0,raw:+$('ed_raw').value||0,notes:$('ed_notes').value.trim(),sku:$('ed_sku').value.trim()};
  if(!nf.name)return toast('Name cannot be empty',false);
  const f={};Object.keys(nf).forEach(k=>{if(nf[k]!==r[k])f[k]=nf[k]});
  if(!Object.keys(f).length){stOpen=0;renderStock();return toast('Nothing changed')}
@@ -1022,7 +1038,7 @@ function setConsole(v){const sel=$('f_con');if(![...sel.options].some(o=>o.value
 A.sugPick=i=>{const x=sugList[i];if(!x)return;
  $('f_title').value=x.title;if(x.code&&!$('f_code').value.trim())$('f_code').value=x.code;
  if(x.console)setConsole(x.console);if(x.format==='CIB'||x.format==='Loose')$('f_fmt').value=x.format;
- hideSug();margin()};
+ hideSug();margin();skuHint()};
 
 // ---- fill in info that an existing record was missing ----
 function fillStockJan(o){
@@ -1277,6 +1293,75 @@ const onCell=()=>{const c=navigator.connection;return !!c&&(c.type==='cellular'|
 const saver=()=>S.dataMode==='saver'||(S.dataMode==='auto'&&onCell());
 function connInfo(){const c=navigator.connection,el=$('connInfo');if(!el)return;
  el.textContent=c?'Detected now: '+(c.type||c.effectiveType||'unknown')+(c.saveData?' (Chrome Data Saver is on)':'')+' | the app data saver is '+(saver()?'ON':'off'):'This device cannot tell what connection it is on. Choose "Always on" to be safe.'}
+// ---- rapid add to comps ----
+let rapidLog=[],rpList=[];
+function rapidFind(){const title=$('rp_title').value.trim(),code=$('rp_code').value.trim().toUpperCase(),con=$('rp_con').value,fmt=$('rp_fmt').value;
+ return S.comps.find(c=>c.console===con&&c.format===fmt&&((code&&c.code===code)||(title&&norm(c.title)===norm(title))))}
+function rapidHint(){const c=rapidFind(),h=$('rp_hint');
+ if(!$('rp_title').value.trim()){h.textContent='';return}
+ h.textContent=c?'Already in your comps: lowest '+(lowP(c)?'¥'+lowP(c).toLocaleString():'not set')+(c.location?' ('+c.location+')':''):'New game: it will be added to your comps.'}
+function rapidSug(){const q=$('rp_title').value.trim(),b=$('rp_sug'),con=$('rp_con').value,fmt=$('rp_fmt').value;
+ rapidHint();
+ if(q.length<2){b.classList.add('hidden');return}
+ rpList=sugSearch(q,'title',5,x=>norm(x.console)===norm(con)&&(!x.format||x.format===fmt)).filter(x=>norm(x.title)!==norm(q));
+ if(!rpList.length){b.classList.add('hidden');return}
+ b.innerHTML=rpList.map((x,i)=>sugRow(x,i,'rpPick')).join('');b.classList.remove('hidden')}
+function rapidCodeFill(fromScan){
+ const v=$('rp_code').value.trim();if(!v)return;
+ const ms=S.comps.filter(x=>x.code&&codeKey(x.code)===codeKey(v));
+ if(!ms.length){if(fromScan){toast('New barcode: type the title',false);$('rp_title').focus()}return}
+ if($('rp_title').value.trim()&&!fromScan)return;
+ const c=ms.find(x=>x.format===$('rp_fmt').value)||ms[0],sel=$('rp_con');
+ $('rp_title').value=c.title;
+ if(![...sel.options].some(o=>o.value===c.console)){const o=document.createElement('option');o.value=o.textContent=c.console;sel.appendChild(o)}
+ sel.value=c.console;$('rp_fmt').value=c.format;S.lastCon=c.console;S.lastFmt=c.format;save();
+ rapidSug();$('rp_price').focus()}
+function renderRapidLog(){$('rp_n').textContent='('+rapidLog.length+')';
+ $('rp_log').innerHTML=rapidLog.length?rapidLog.map(x=>`<div class="bg-[#0b0c10] rounded-xl px-2 py-1"><span class="text-white">${esc(x.title)}</span> <span class="text-gray-500 text-xs">${esc(x.con)} ${esc(x.fmt)} | ${x.price?'¥'+x.price.toLocaleString():'no price'} | ${esc(x.status)}</span></div>`).join(''):'<div class="text-xs text-gray-500">Nothing yet.</div>'}
+A.rapid=()=>{
+ const c=$('rp_con');c.innerHTML=CON.map(x=>`<option>${esc(x)}</option>`).join('');
+ if(S.lastCon&&![...c.options].some(o=>o.value===S.lastCon)){const o=document.createElement('option');o.value=o.textContent=S.lastCon;c.appendChild(o)}
+ c.value=S.lastCon||CON[0];$('rp_fmt').value=S.lastFmt||'CIB';$('rp_src').value=S.rapidSrc||'Mercari';
+ $('rp_title').value='';$('rp_price').value='';$('rp_code').value='';$('rp_sug').classList.add('hidden');$('rp_hint').textContent='';
+ fillStoreSelects();renderRapidLog();$('rapidM').classList.remove('hidden');$('rp_title').focus()};
+A.rapidClose=()=>{$('rapidM').classList.add('hidden');renderAll()};
+A.rpPick=i=>{const x=rpList[i];if(!x)return;$('rp_title').value=x.title;if(x.code&&!$('rp_code').value.trim())$('rp_code').value=x.code;
+ $('rp_sug').classList.add('hidden');rapidHint();$('rp_price').focus()};
+A.rapidAdd=()=>{
+ const title=$('rp_title').value.trim(),price=+$('rp_price').value||0,code=$('rp_code').value.trim().toUpperCase(),con=$('rp_con').value,fmt=$('rp_fmt').value,src=$('rp_src').value.trim()||'Mercari';
+ if(!title)return toast('Type the title, or scan a barcode that is already in your comps',false);
+ S.lastCon=con;S.lastFmt=fmt;S.rapidSrc=src;save();
+ const before=rapidFind(),prev=before?lowP(before):0,o={title,code,console:con,format:fmt,rank:'',compUSD:0,paidJPY:price,location:src};
+ const n1=compFromBuy(o);fillMissing(o);
+ const status=!before?'new game added':n1?'new lowest'+(prev?' (was ¥'+prev.toLocaleString()+')':''):(price?'no change: existing lowest ¥'+prev.toLocaleString()+' is lower':'already in your comps');
+ rapidLog.unshift({title,price,status,fmt,con});rapidLog=rapidLog.slice(0,40);
+ $('rp_title').value='';$('rp_price').value='';$('rp_code').value='';$('rp_sug').classList.add('hidden');$('rp_hint').textContent='';
+ renderRapidLog();$('rp_title').focus()};
+$('rp_title').addEventListener('input',rapidSug);$('rp_code').addEventListener('input',()=>{rapidCodeFill(false);rapidHint()});
+$('rp_title').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('rp_price').focus()}});
+$('rp_price').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();A.rapidAdd()}});
+$('rp_code').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();A.rapidAdd()}});
+$('rp_con').addEventListener('change',()=>{S.lastCon=$('rp_con').value;save();rapidSug()});
+$('rp_fmt').addEventListener('change',()=>{S.lastFmt=$('rp_fmt').value;save();rapidSug()});
+$('rp_src').addEventListener('change',()=>{S.rapidSrc=$('rp_src').value.trim();save()});
+
+// ---- SKUs: 1A, 1B ... 1Z, 2A, 2B ... counted per game (same title and console) ----
+const skuIdx=s=>{const m=/^(\d+)([A-Za-z])$/.exec(String(s||'').trim());return m?(+m[1]-1)*26+(m[2].toUpperCase().charCodeAt(0)-65):-1};
+const skuStr=n=>(Math.floor(n/26)+1)+String.fromCharCode(65+n%26);
+const gameKey=(name,type)=>typeNorm(type)+'|'+tkey(name);
+function nextSku(name,type,batch){
+ const k=gameKey(name,type);let max=-1;
+ S.stock.forEach(r=>{if(gameKey(r.name,r.type)===k)max=Math.max(max,skuIdx(r.sku))});
+ S.sales.forEach(x=>{if(x.sku&&gameKey(x.name,x.type)===k)max=Math.max(max,skuIdx(x.sku))});
+ (batch||[]).forEach(b=>{if(b.k===k)max=Math.max(max,skuIdx(b.sku))});
+ return skuStr(max+1);
+}
+function skuHint(){const t=$('f_title').value.trim(),el=$('skuHint');if(!el)return;
+ if(!t){el.textContent='';return}
+ const type=stockType($('f_con').value),k=gameKey(t,type),n=S.stock.filter(r=>gameKey(r.name,r.type)===k).length;
+ el.textContent='Suggested SKU: '+nextSku(t,type)+(n?' ('+n+' copy'+(n>1?'ies':'')+' of this game already in STOCK)':' (first copy of this game)')}
+A.skuSuggest=row=>{const r=S.stock.find(x=>x.row===+row);if(r)$('ed_sku').value=nextSku(r.name,r.type)};
+
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
  const m=Math.floor((Date.now()-lastSyncT)/60000);el.textContent=m<1?'updated just now':m<60?'updated '+m+' min ago':'updated '+Math.floor(m/60)+' h ago'}
@@ -1410,7 +1495,7 @@ document.addEventListener('change',e=>{
  }
 });
 ['f_price','f_comp'].forEach(id=>$(id).addEventListener('input',margin));
-$('f_title').addEventListener('input',()=>showSug('title'));$('f_code').addEventListener('input',()=>showSug('code'));
+$('f_title').addEventListener('input',()=>{showSug('title');skuHint()});$('f_con').addEventListener('change',()=>skuHint());$('f_code').addEventListener('input',()=>showSug('code'));
 $('q1').addEventListener('input',search1);$('q2').addEventListener('input',search2);
 $('fSt').addEventListener('change',renderInv);$('mSel').addEventListener('change',renderInv);$('stQ').addEventListener('input',renderStock);$('stSort').addEventListener('change',renderStock);$('fCon').addEventListener('change',renderInv);$('fRank').addEventListener('change',renderInv);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeScan();$('lowM').classList.add('hidden');$('formM').classList.add('hidden');$('setM').classList.add('hidden')}});
