@@ -575,7 +575,8 @@ function search1(){
     <span><span class="text-gray-400 mr-1">${esc(c.format)}</span><span class="rk rk-${esc(c.rank)}">${esc(c.rank)}</span></span></div>
     <div class="flex justify-between gap-2 mt-2"><div class="font-bold text-white text-lg leading-snug flex-1">${esc(c.title)}</div><button data-a="watch" data-i="${i}" class="text-2xl leading-none ${isW(c)?'text-yellow-300':'text-gray-600'}" aria-label="Watchlist">★</button></div>
    ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}
-   ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div></div>
+   ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div>
+    <div class="mt-1 text-base text-gray-300">Lowest seen: <b class="text-white">${lowP(c)?yen(lowP(c)):'not set'}</b>${lowP(c)&&c.location?` <span class="text-xs text-gray-500">(${esc(c.location)})</span>`:''}</div></div>
    ${bandBox(c,lowP(c),i,false)}
    <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><button class="btn bg-[#0b0c10] border border-white/10 shrink-0" data-a="padOpen" data-i="px${i}" aria-label="Number pad">🔢</button><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-sky-500 text-white shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
    <button class="btn w-full bg-[#0b0c10] border border-white/10 text-white" data-a="bask" data-i="${i}">＋ Add to basket</button>
