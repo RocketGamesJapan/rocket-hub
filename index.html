@@ -576,8 +576,8 @@ function search1(){
     <div class="flex justify-between gap-2 mt-2"><div class="font-bold text-white text-lg leading-snug flex-1">${esc(c.title)}</div><button data-a="watch" data-i="${i}" class="text-2xl leading-none ${isW(c)?'text-yellow-300':'text-gray-600'}" aria-label="Watchlist">★</button></div>
    ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}
    ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div>
-    <div class="mt-1 text-base text-gray-300">Lowest seen <span class="px-1.5 py-0.5 rounded bg-white/10 text-xs font-bold text-white">${esc(c.format||'')}</span> <b class="text-white">${lowP(c)?yen(lowP(c)):'not set'}</b>${lowP(c)&&c.location?` <span class="text-xs text-gray-500">(${esc(c.location)})</span>`:''}</div></div>
-   ${bandBox(c,lowP(c),i,false)}
+    <div class="mt-1 text-base text-gray-300">Lowest seen <span class="px-1.5 py-0.5 rounded bg-white/10 text-xs font-bold text-white">${esc(c.format||'')}</span> <b class="text-white">${lowP(c)?yen(lowP(c)):'not set'}</b>${lowP(c)&&c.location?` <span class="text-xs text-gray-500">(${esc(c.location)})</span>`:''}</div>${sibLine(c)}</div>
+   ${bandBox(c,lowP(c),i,false)}${listLine(c)}
    <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><button class="btn bg-[#0b0c10] border border-white/10 shrink-0" data-a="padOpen" data-i="px${i}" aria-label="Number pad">🔢</button><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-sky-500 text-white shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
    <button class="btn w-full bg-[#0b0c10] border border-white/10 text-white" data-a="bask" data-i="${i}">＋ Add to basket</button>
    <details><summary class="text-sm text-sky-300 cursor-pointer py-1">More ▾</summary><div class="space-y-2 pt-2">
@@ -1362,6 +1362,17 @@ function skuHint(){const t=$('f_title').value.trim(),el=$('skuHint');if(!el)retu
  const type=stockType($('f_con').value),k=gameKey(t,type),n=S.stock.filter(r=>gameKey(r.name,r.type)===k).length;
  el.textContent='Suggested SKU: '+nextSku(t,type)+(n?' ('+n+' copy'+(n>1?'ies':'')+' of this game already in STOCK)':' (first copy of this game)')}
 A.skuSuggest=row=>{const r=S.stock.find(x=>x.row===+row);if(r)$('ed_sku').value=nextSku(r.name,r.type)};
+
+// ---- extra lines on result cards ----
+const sibs=c=>S.comps.filter(x=>x!==c&&x.console===c.console&&x.format!==c.format&&((c.code&&x.code===c.code)||tkey(x.title)===tkey(c.title)));
+const sibLine=c=>{const l=sibs(c);
+ return l.length?'<div class="text-sm text-gray-400">'+l.map(x=>'Also '+esc(x.format)+': <b class="text-gray-200">'+(lowP(x)?yen(lowP(x)):'not set')+'</b>'+(lowP(x)&&x.location?' <span class="text-xs text-gray-500">('+esc(x.location)+')</span>':'')).join(' | ')+'</div>':''};
+const listLine=c=>{
+ if(c.compUSD>0)return '';
+ const m=S.stock.filter(r=>r.raw>0&&stMatch(r,c)).sort((a,b)=>String(b.purchaseDate).localeCompare(String(a.purchaseDate)));
+ if(!m.length)return '';
+ const r=m[0];
+ return `<div class="text-xs rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-200 px-2 py-1">📋 My listing price: <b>${yen(r.raw)}</b> (about $${Math.round(r.raw/S.rate)}) <span class="text-gray-400">from your STOCK sheet${m.length>1?' (latest of '+m.length+' copies)':''}. This is what I list it for, not a sold comp.</span></div>`};
 
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
