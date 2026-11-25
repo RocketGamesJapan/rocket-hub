@@ -577,7 +577,7 @@ function search1(){
    ${ownN(c).length?`<div class="text-sm font-bold text-sky-300">📦 You have ${ownN(c).length} in stock (${ownN(c).map(i=>esc(i.rank)).join(', ')})</div>`:''}
    ${isW(c)&&watchOf(c).max?`<div class="text-sm font-bold text-yellow-300">★ BUY under ${yen(watchOf(c).max)}</div>`:''}<div class="text-xs text-gray-400">${esc(c.console)}</div>
     <div class="mt-1 text-base text-gray-300">Lowest seen <span class="px-1.5 py-0.5 rounded bg-white/10 text-xs font-bold text-white">${esc(c.format||'')}</span> <b class="text-white">${lowP(c)?yen(lowP(c)):'not set'}</b>${lowP(c)&&c.location?` <span class="text-xs text-gray-500">(${esc(c.location)})</span>`:''}</div>${sibLine(c)}</div>
-   ${bandBox(c,lowP(c),i,false)}${listLine(c)}
+   ${bandBox(c,lowP(c),i,false)}${listLine(c,i)}
    <div class="flex gap-2"><input id="px${i}" data-px="${i}" type="number" inputmode="numeric" placeholder="Shelf price ¥" class="inp"><button class="btn bg-[#0b0c10] border border-white/10 shrink-0" data-a="padOpen" data-i="px${i}" aria-label="Number pad">🔢</button><select id="rk${i}" class="inp !w-16 px-1">${['S','A','B','C','D'].map(r=>`<option ${r===(c.rank||'B')?'selected':''}>${r}</option>`).join('')}</select><button class="btn bg-sky-500 text-white shrink-0" data-a="quick" data-i="${i}">⚡ Quick add</button></div>
    <button class="btn w-full bg-[#0b0c10] border border-white/10 text-white" data-a="bask" data-i="${i}">＋ Add to basket</button>
    <details><summary class="text-sm text-sky-300 cursor-pointer py-1">More ▾</summary><div class="space-y-2 pt-2">
@@ -829,7 +829,8 @@ A.quick=i=>{
  toast('Added '+c.title+' for '+yen(v)+' at '+name+(note?' ('+note+')':''));
 };
 document.addEventListener('input',e=>{const k=e.target.dataset.px;if(k===undefined)return;
- const c=S.comps[k],v=+e.target.value;$('band'+k).outerHTML=bandBox(c,v>0?v:lowP(c),k,v>0)});
+ const c=S.comps[k],v=+e.target.value;$('band'+k).outerHTML=bandBox(c,v>0?v:lowP(c),k,v>0);
+ const lb=$('lst'+k);if(lb)lb.outerHTML=listLine(c,k,v>0?v:0)});
 A.fe=()=>{const t=$('f_title').value.trim();if(!t)return toast('Enter a title first',false);window.open(ebay({title:t,format:$('f_fmt').value}),'_blank')};
 A.fe2=()=>window.open(ebay(S.comps[lowIdx]),'_blank');
 A.stf=c=>{stFilter=c;renderStock()};
@@ -1367,12 +1368,12 @@ A.skuSuggest=row=>{const r=S.stock.find(x=>x.row===+row);if(r)$('ed_sku').value=
 const sibs=c=>S.comps.filter(x=>x!==c&&x.console===c.console&&x.format!==c.format&&((c.code&&x.code===c.code)||tkey(x.title)===tkey(c.title)));
 const sibLine=c=>{const l=sibs(c);
  return l.length?'<div class="text-sm text-gray-400">'+l.map(x=>'Also '+esc(x.format)+': <b class="text-gray-200">'+(lowP(x)?yen(lowP(x)):'not set')+'</b>'+(lowP(x)&&x.location?' <span class="text-xs text-gray-500">('+esc(x.location)+')</span>':'')).join(' | ')+'</div>':''};
-const listLine=c=>{
+const listLine=(c,i,price)=>{
  if(c.compUSD>0)return '';
  const m=S.stock.filter(r=>r.raw>0&&stMatch(r,c)).sort((a,b)=>String(b.purchaseDate).localeCompare(String(a.purchaseDate)));
  if(!m.length)return '';
- const r=m[0];
- return `<div class="text-xs rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-200 px-2 py-1">📋 My listing price: <b>${yen(r.raw)}</b> (about $${Math.round(r.raw/S.rate)}) <span class="text-gray-400">from your STOCK sheet${m.length>1?' (latest of '+m.length+' copies)':''}. This is what I list it for, not a sold comp.</span></div>`};
+ const raw=m[0].raw,after=raw*(1-S.fee/100),cost=price>0?price:lowP(c),p=cost?after-cost:null;
+ return `<div id="lst${i}" class="text-xs rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-200 px-2 py-1 space-y-0.5"><div>📋 My listing price: <b class="text-white">${yen(raw)}</b> <span class="text-gray-400">(not a sold comp)</span></div><div>After eBay fees: <b class="text-white">${yen(after)}</b>${p===null?'':` | Profit ${price>0?'at your shelf price':'if bought at the lowest seen'} ${yen(cost)}: <b class="${p>=0?'text-emerald-300':'text-red-400'}">${p>0?'+':''}${yen(p)}</b>`}</div></div>`};
 
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
