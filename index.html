@@ -189,7 +189,7 @@ body.light .pill{color:#374151}
   <div class="font-bold text-white">Update prices</div>
   <div id="lowItem" class="text-sm text-gray-400"></div>
   <div><label class="lbl">New lowest price (JPY)</label><input id="low_price" type="number" min="0" class="inp"></div>
-  <div><label class="lbl">eBay comp (USD) - change only if you rechecked it</label><input id="low_comp" type="number" min="0" step="0.01" class="inp"><button class="text-sm text-sky-300 mt-1" data-a="fe2">Check eBay sold listings ↗</button></div>
+  <div><label class="lbl">eBay comp (USD) - change only if you rechecked it</label><div class="flex gap-2"><input id="low_comp" type="number" min="0" step="0.01" inputmode="decimal" placeholder="$" class="inp"><input id="low_comp_jpy" data-jpy-for="low_comp" type="number" min="0" inputmode="numeric" placeholder="or ¥" class="inp"></div><button class="text-sm text-sky-300 mt-1" data-a="fe2">Check eBay sold listings ↗</button></div>
   <div><label class="lbl">Seen at</label><div class="flex gap-2"><input id="low_loc" list="stores" class="inp" placeholder="e.g. Book Off Nogata"><select class="inp !w-24 shrink-0" data-store="low_loc"><option value="">Stores</option></select><button class="btn bg-sky-500 text-white" data-a="gps" data-i="low_loc" aria-label="Find my location">📍</button></div></div>
   <div class="flex justify-end gap-2">
    <button class="btn bg-[#0b0c10]" data-a="closeLow">Cancel</button>
@@ -213,8 +213,11 @@ body.light .pill{color:#374151}
   </div>
   <div class="grid grid-cols-4 gap-3">
    <div id="priceBox" class="col-span-2"><label id="f_priceLbl" class="lbl"></label><input id="f_price" type="number" min="0" class="inp"></div>
-   <div><label class="lbl">Comp (USD)</label><input id="f_comp" type="number" min="0" step="0.01" class="inp"></div>
-   <div><label class="lbl">Format</label><select id="f_fmt" class="inp"><option>CIB</option><option>Loose</option></select></div>
+   <div class="col-span-2"><label class="lbl">Format</label><select id="f_fmt" class="inp"><option>CIB</option><option>Loose</option></select></div>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+   <div><label class="lbl">Comp (USD)</label><input id="f_comp" type="number" min="0" step="0.01" inputmode="decimal" class="inp"></div>
+   <div><label class="lbl">or Comp (¥)</label><input id="f_comp_jpy" data-jpy-for="f_comp" type="number" min="0" inputmode="numeric" class="inp"></div>
   </div>
   <div class="grid grid-cols-2 gap-3">
    <div><label class="lbl">Rank</label><select id="f_rank" class="inp"><option>S</option><option>A</option><option selected>B</option><option>C</option><option>D</option></select></div>
@@ -263,7 +266,7 @@ body.light .pill{color:#374151}
  <div><label class="lbl">Game title</label><input id="unk_title" class="inp" autocomplete="off"></div>
  <div id="unkSug" class="hidden rounded-xl border border-white/10 divide-y divide-white/10 overflow-hidden"></div>
  <div class="grid grid-cols-2 gap-2"><div><label class="lbl">Console</label><select id="unk_con" class="inp"></select></div><div><label class="lbl">Condition</label><select id="unk_fmt" class="inp"><option>CIB</option><option>Loose</option></select></div></div>
- <div class="grid grid-cols-2 gap-2"><div><label class="lbl">Shelf price (¥)</label><input id="unk_price" type="number" inputmode="numeric" class="inp"></div><div><label class="lbl">Comp ($, optional)</label><input id="unk_comp" type="number" step="0.01" inputmode="decimal" class="inp"></div></div>
+ <div class="grid grid-cols-2 gap-2"><div><label class="lbl">Shelf price (¥)</label><input id="unk_price" type="number" inputmode="numeric" class="inp"></div><div class="space-y-1"><label class="lbl">Comp, optional</label><input id="unk_comp" type="number" step="0.01" inputmode="decimal" placeholder="$" class="inp"><input id="unk_comp_jpy" data-jpy-for="unk_comp" type="number" min="0" inputmode="numeric" placeholder="or ¥" class="inp"></div></div>
  <label class="flex items-center gap-2 text-sm text-gray-300"><input id="unk_save" type="checkbox" checked> Also save to my comps database</label>
  <div class="flex justify-end gap-2"><button class="btn bg-[#0b0c10]" data-a="unkSkip">Skip</button><button class="btn bg-sky-500 text-white" data-a="unkSave">Add to review list</button></div></div></div>
 <div id="padM" class="fixed inset-0 z-50 hidden bg-black/80 p-4"><div class="card max-w-xs mx-auto mt-16 space-y-3">
@@ -666,7 +669,7 @@ function openForm(mode,item){
  $('locBox').classList.toggle('hidden',mode==='cart');$('priceBox').classList.toggle('hidden',mode==='cart');$('saveCompBox').classList.toggle('hidden',mode!=='cart');$('notesBox').classList.toggle('hidden',mode!=='inv');$('f_notes').value='';$('skuBox').classList.toggle('hidden',mode!=='inv');$('f_sku').value='';
  $('f_title').value=item?.title||'';$('f_code').value=item?.code||'';
  setConsole(item?.console||S.lastCon||CON[0]);
- $('f_price').value=(item&&lowP(item))||'';$('f_comp').value=item?.compUSD??'';
+ $('f_price').value=(item&&lowP(item))||'';$('f_comp').value=item?.compUSD??'';$('f_comp_jpy').value=item?.compUSD?Math.round(item.compUSD*S.rate):'';
  $('f_fmt').value=item?.format||S.lastFmt||'CIB';$('f_rank').value=item?.rank||'B';$('f_loc').value='';
  margin();$('formM').classList.remove('hidden');$('f_title').focus();if(mode!=='cart')autoLoc('f_loc');fillStoreSelects();
  hideSug();if(!(item&&item.title)){if($('f_code').value&&!$('f_title').value)showSug('code');else if($('f_title').value.trim().length>1)showSug('title')}
@@ -987,7 +990,7 @@ function renderRefresh(){
  const need=c=>!c.compUSD||!c.compDate||daysSince(c.compDate)>180;
  const l=S.comps.map((c,i)=>({c,i,n:cnt[norm(c.title)+'|'+c.format+'|'+norm(c.console)]||0})).filter(x=>x.n>0&&need(x.c)).sort((a,b)=>b.n-a.n).slice(0,25);
  $('rfCount').textContent='('+l.length+(l.length===25?'+':'')+')';
- $('rfBody').innerHTML=l.length?l.map(({c,i,n})=>`<div class="bg-[#0b0c10] rounded-xl p-2 space-y-1"><div class="text-white">${esc(c.title)}</div><div class="text-xs text-gray-400">${esc(c.console)} | ${esc(c.format)} | in your history ${n}x | ${c.compUSD?'comp $'+c.compUSD+(c.compDate?' ('+daysSince(c.compDate)+' days old)':' (no date)'):'no comp'}</div><div class="flex items-center gap-2"><input id="rf${i}" type="number" step="0.01" inputmode="decimal" placeholder="new comp $" class="inp !py-1.5 !w-28"><button class="btn bg-sky-500 text-white !py-1.5" data-a="rfSave" data-i="${i}">Save</button><a class="text-xs text-sky-300 underline" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold</a></div></div>`).join(''):'<div class="text-xs text-gray-500">Every comp you actually buy or sell is up to date.</div>';
+ $('rfBody').innerHTML=l.length?l.map(({c,i,n})=>`<div class="bg-[#0b0c10] rounded-xl p-2 space-y-1"><div class="text-white">${esc(c.title)}</div><div class="text-xs text-gray-400">${esc(c.console)} | ${esc(c.format)} | in your history ${n}x | ${c.compUSD?'comp $'+c.compUSD+(c.compDate?' ('+daysSince(c.compDate)+' days old)':' (no date)'):'no comp'}</div><div class="flex items-center gap-2"><input id="rf${i}" type="number" step="0.01" inputmode="decimal" placeholder="new comp $" class="inp !py-1.5 !w-24"><input id="rfy${i}" data-jpy-for="rf${i}" type="number" inputmode="numeric" placeholder="or ¥" class="inp !py-1.5 !w-24"><button class="btn bg-sky-500 text-white !py-1.5" data-a="rfSave" data-i="${i}">Save</button><a class="text-xs text-sky-300 underline" target="_blank" rel="noopener" href="${ebay(c)}">eBay sold</a></div></div>`).join(''):'<div class="text-xs text-gray-500">Every comp you actually buy or sell is up to date.</div>';
 }
 A.rfSave=i=>{const c=S.comps[i],v=+$('rf'+i).value;if(!(v>0))return toast('Type the new comp',false);
  c.compUSD=v;c.compDate=today();
@@ -1070,7 +1073,7 @@ function openUnknown(v,pre){
  $('aiBox').classList.toggle('hidden',!AI_READER);
  pre=pre||{};unkCode=v||'';unkOpen=true;
  $('unk_code').textContent=unkCode?'Barcode / code: '+unkCode:'No barcode';
- $('unk_title').value=pre.title||'';$('unk_price').value='';$('unk_comp').value='';$('unk_save').checked=true;$('aiMsg').textContent='';
+ $('unk_title').value=pre.title||'';$('unk_price').value='';$('unk_comp').value='';$('unk_comp_jpy').value='';$('unk_save').checked=true;$('aiMsg').textContent='';
  const sel=$('unk_con');sel.innerHTML=CON.map(c=>`<option>${esc(c)}</option>`).join('');
  const want=pre.console||S.lastCon;
  if(want){if(![...sel.options].some(o=>o.value===want)){const o=document.createElement('option');o.value=o.textContent=want;sel.appendChild(o)}sel.value=want}
@@ -1375,6 +1378,20 @@ const listLine=(c,i,price)=>{
  const raw=m[0].raw,after=raw*(1-S.fee/100),cost=price>0?price:lowP(c),p=cost?after-cost:null;
  return `<div id="lst${i}" class="text-xs rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-200 px-2 py-1 space-y-0.5"><div>📋 My listing price: <b class="text-white">${yen(raw)}</b> <span class="text-gray-400">(not a sold comp)</span></div><div>After eBay fees: <b class="text-white">${yen(after)}</b>${p===null?'':` | Profit ${price>0?'at your shelf price':'if bought at the lowest seen'} ${yen(cost)}: <b class="${p>=0?'text-emerald-300':'text-red-400'}">${p>0?'+':''}${yen(p)}</b>`}</div></div>`};
 
+// ---- comp boxes in yen and dollars stay in step (the database stores dollars) ----
+let jpySync=false;
+function jpyHandler(e){
+ const t=e.target;if(!t||!t.dataset)return;
+ if(t.dataset.jpyFor!==undefined){
+  const usd=$(t.dataset.jpyFor);if(!usd)return;const v=+t.value;
+  usd.value=v>0?Math.round(v/S.rate*100)/100:'';
+  jpySync=true;usd.dispatchEvent(new Event('input',{bubbles:true}));jpySync=false;return}
+ if(jpySync||!t.id)return;
+ const y=document.querySelector('[data-jpy-for="'+t.id+'"]');
+ if(y){const v=+t.value;y.value=v>0?Math.round(v*S.rate):''}
+}
+document.addEventListener('input',jpyHandler);
+
 let lastSyncT=0,lastStage=null;
 function showAgo(){const el=$('syncAgo');if(!lastSyncT){el.textContent='';return}
  const m=Math.floor((Date.now()-lastSyncT)/60000);el.textContent=m<1?'updated just now':m<60?'updated '+m+' min ago':'updated '+Math.floor(m/60)+' h ago'}
@@ -1482,7 +1499,7 @@ A.forgetStores=()=>{S.stores=[];save();toast('Forgot all saved store locations')
 let lowIdx=-1;
 A.low=i=>{lowIdx=+i;const c=S.comps[lowIdx];
  $('lowItem').textContent=c.title+' ('+c.console+') - now '+yen(lowP(c));
- $('low_price').value=lowP(c)||'';$('low_comp').value=c.compUSD||'';$('low_loc').value='';
+ $('low_price').value=lowP(c)||'';$('low_comp').value=c.compUSD||'';$('low_comp_jpy').value=c.compUSD?Math.round(c.compUSD*S.rate):'';$('low_loc').value='';
  $('lowM').classList.remove('hidden');$('low_price').select();autoLoc('low_loc');fillStoreSelects()};
 A.closeLow=()=>$('lowM').classList.add('hidden');
 A.saveLow=()=>{
